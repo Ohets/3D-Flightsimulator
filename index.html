@@ -62,7 +62,7 @@ const aircraftData=[
 {name:"Heavy Cargo Titan",price:1500,speedMax:60,handling:.5,liftFactor:.3,color:0x234e52,desc:"Das größte Flugzeug der Flotte."},
 {name:"Stealth Ghost Jet",price:2500,speedMax:120,handling:2.2,liftFactor:.14,color:0x1a202c,desc:"Das ultimative High-End Flugzeug."}];
 const missionData=[];
-for(let i=1;i<=20;i++)missionData.push({id:i-1,name:"Mission "+i+": "+(i===1?"Erster Start":i<=5?"Höhentraining":i<=10?"Präzisionsflug":i<=15?"Schwerer Navigationkurs":"Extremes Manöver"),targetPos:{x:Math.sin(i*1.5)*(200+i*50),y:40+i*12+Math.cos(i)*20,z:-300-i*180},reward:30+i*20,desc:"Fliege präzise durch den markierten Kontrollring am Himmel."});
+for(let i=1;i<=40;i++)missionData.push({id:i-1,name:"Mission "+i+": "+(i===1?"Erster Start":i===21?"Neue Region":i<=5?"Höhentraining":i<=10?"Präzisionsflug":i<=20?"Schwerer Navigationskurs":i<=30?"Küstenflug":i<=35?"Gebirgsflug":"Extremes Manöver"),targetPos:{x:Math.sin(i*1.5)*(220+i*55)+(i>20?1800:0),y:40+i*11+Math.cos(i)*20,z:-300-i*170},reward:30+i*20,desc:"Fliege präzise durch den markierten Kontrollring am Himmel."});
 let scene,camera,renderer,airplane,propellerLeft,propellerRight,ringTarget,clock=new THREE.Clock();
 let physics={speed:0,throttle:0,pitchSpeed:0,rollSpeed:0,yawSpeed:0,altitude:0,velocity:new THREE.Vector3(0,0,0),orientation:new THREE.Quaternion()};
 let inputs={pitchUp:false,pitchDown:false,rollLeft:false,rollRight:false,throttleUp:false,throttleDown:false};
@@ -70,29 +70,34 @@ const shopListEl=document.getElementById('shop-list'),missionSelectEl=document.g
 function updateUI(){
 document.getElementById('menu-credits').innerText=saveState.credits;document.getElementById('hud-credits').innerText=saveState.credits;shopListEl.innerHTML='';
 aircraftData.forEach((ac,idx)=>{const u=saveState.unlockedAircraft.includes(idx),s=saveState.selectedAircraft===idx,item=document.createElement('div');item.className="shop-item "+(s?"selected":"");const speedPct=ac.speedMax/120*100,handPct=ac.handling/2.5*100;item.innerHTML='<div><h3>'+ac.name+'</h3><p style="font-size:11px;color:#a0aec0;margin:0 0 10px">'+ac.desc+'</p><div style="font-size:11px;text-align:left">SPEED ('+ac.speedMax*8+' km/h)</div><div class="stats-bar"><div class="stats-fill" style="width:'+speedPct+'%"></div></div><div style="font-size:11px;text-align:left">HANDLING</div><div class="stats-bar"><div class="stats-fill" style="width:'+handPct+'%;background:#00bfff"></div></div></div><div>'+ (u?'<button class="shop-btn '+(s?'':'owned')+'" onclick="selectAircraft('+idx+')">'+(s?'Ausgewählt':'Wählen')+'</button>':'<button class="shop-btn locked" onclick="buyAircraft('+idx+')">Kaufen: '+ac.price+' C</button>')+'</div>';shopListEl.appendChild(item);});
-missionSelectEl.innerHTML='';missionData.forEach(m=>{const o=document.createElement('option');o.value=m.id;o.selected=saveState.currentMission===m.id;o.innerText=m.name+' (+'+m.reward+' Credits)';missionSelectEl.appendChild(o);});}
+missionSelectEl.innerHTML='';missionSelectEl.previousElementSibling.innerText='Mission auswählen (1-40):';missionData.forEach(m=>{const o=document.createElement('option');o.value=m.id;o.selected=saveState.currentMission===m.id;o.innerText=m.name+' (+'+m.reward+' Credits)';missionSelectEl.appendChild(o);});}
 window.selectAircraft=function(idx){saveState.selectedAircraft=idx;saveGame();updateUI();};
 window.buyAircraft=function(idx){const p=aircraftData[idx].price;if(saveState.credits>=p){saveState.credits-=p;saveState.unlockedAircraft.push(idx);saveState.selectedAircraft=idx;saveGame();updateUI();}else alert("Nicht genug Credits! Fliege erst Missionen, um Credits zu verdienen.");};
 function init3D(){
 const c=document.getElementById('canvas-container');c.innerHTML='';scene=new THREE.Scene();scene.background=new THREE.Color(0x87ceeb);scene.fog=new THREE.FogExp2(0x87ceeb,.00055);camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,9000);renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;c.appendChild(renderer.domElement);
 scene.add(new THREE.AmbientLight(0xffffff,.6));const sun=new THREE.DirectionalLight(0xfffaed,.8);sun.position.set(500,1000,500);scene.add(sun);
-const ground=new THREE.Mesh(new THREE.PlaneGeometry(10000,10000,32,32),new THREE.MeshStandardMaterial({color:0x557a46,roughness:.9,metalness:.1,flatShading:true}));ground.rotation.x=-Math.PI/2;scene.add(ground);buildScenery();
+const region=saveState.currentMission>=20?1:0;
+const groundColor=region===0?0x557a46:0x8b7650;
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(10000,10000,32,32),new THREE.MeshStandardMaterial({color:groundColor,roughness:.9,metalness:.1,flatShading:true}));ground.rotation.x=-Math.PI/2;scene.add(ground);buildScenery(region);
 buildAirportExpansion();
 const runway=new THREE.Mesh(new THREE.PlaneGeometry(60,800),new THREE.MeshStandardMaterial({color:0x333333,roughness:.8}));runway.rotation.x=-Math.PI/2;runway.position.set(0,.1,-250);scene.add(runway);
 const lineGeo=new THREE.PlaneGeometry(2,40),lineMat=new THREE.MeshBasicMaterial({color:0xffffff});for(let z=-600;z<=100;z+=100){const l=new THREE.Mesh(lineGeo,lineMat);l.rotation.x=-Math.PI/2;l.position.set(0,.2,z);scene.add(l);}
 buildAirplaneModel();buildMissionRing();physics.speed=0;physics.throttle=0;airplane.position.set(0,2,0);airplane.rotation.set(0,Math.PI,0);addEventListener('resize',onWindowResize,false);}
 
-function buildScenery(){
-const waterMat=new THREE.MeshStandardMaterial({color:0x2b8fba,roughness:.18,metalness:.05,transparent:true,opacity:.92});
-const lakeData=[
+function buildScenery(region=0){
+const waterMat=new THREE.MeshStandardMaterial({color:region===0?0x2b8fba:0x1d8fb0,roughness:.18,metalness:.05,transparent:true,opacity:.92});
+const lakeData=region===0?[
 {x:-650,z:-850,w:520,d:850,r:.18},{x:850,z:-1450,w:700,d:1100,r:-.22},
 {x:-1050,z:-2850,w:900,d:650,r:.1},{x:1200,z:-3500,w:1000,d:750,r:.28}
+]:[
+{x:-900,z:-1000,w:900,d:500,r:.1},{x:900,z:-1900,w:1100,d:650,r:-.18},
+{x:-1200,z:-3000,w:700,d:1000,r:.25},{x:1500,z:-3900,w:1200,d:700,r:-.1}
 ];
 lakeData.forEach(l=>{
  const water=new THREE.Mesh(new THREE.PlaneGeometry(l.w,l.d),waterMat);
  water.rotation.x=-Math.PI/2;water.rotation.z=l.r;water.position.set(l.x,.035,l.z);scene.add(water);
 });
-const sea=new THREE.Mesh(new THREE.PlaneGeometry(4200,4200),new THREE.MeshStandardMaterial({color:0x167da6,roughness:.2,metalness:.05}));
+const sea=new THREE.Mesh(new THREE.PlaneGeometry(5000,5000),new THREE.MeshStandardMaterial({color:region===0?0x167da6:0x126d86,roughness:.2,metalness:.05}));
 sea.rotation.x=-Math.PI/2;sea.position.set(1900,.025,-3000);scene.add(sea);
 const mountainMats=[
 new THREE.MeshStandardMaterial({color:0x536b52,roughness:1,flatShading:true}),
@@ -100,10 +105,14 @@ new THREE.MeshStandardMaterial({color:0x65725e,roughness:1,flatShading:true}),
 new THREE.MeshStandardMaterial({color:0x4b5563,roughness:1,flatShading:true})
 ];
 const snowMat=new THREE.MeshStandardMaterial({color:0xe9f2f5,roughness:.95,flatShading:true});
-const mountainGroups=[
+const mountainGroups=region===0?[
 {x:-1100,z:-650,n:7,h:260,s:150},{x:1050,z:-1100,n:8,h:330,s:190},
 {x:-1350,z:-1900,n:9,h:380,s:220},{x:1150,z:-2500,n:10,h:450,s:250},
 {x:-900,z:-3600,n:8,h:500,s:280},{x:1900,z:-4300,n:7,h:330,s:210}
+]:[
+{x:-1400,z:-700,n:8,h:180,s:230},{x:1100,z:-1100,n:9,h:240,s:260},
+{x:-1300,z:-2100,n:10,h:300,s:280},{x:1400,z:-2700,n:11,h:420,s:300},
+{x:-900,z:-3700,n:9,h:520,s:320},{x:2100,z:-4300,n:8,h:380,s:260}
 ];
 mountainGroups.forEach((g,gi)=>{
  for(let i=0;i<g.n;i++){
@@ -118,7 +127,7 @@ mountainGroups.forEach((g,gi)=>{
   }
  }
 });
-const treeMat=new THREE.MeshStandardMaterial({color:0x245c35,roughness:1});
+const treeMat=new THREE.MeshStandardMaterial({color:region===0?0x245c35:0x356b32,roughness:1});
 const trunkMat=new THREE.MeshStandardMaterial({color:0x60452f,roughness:1});
 for(let i=0;i<90;i++){
  const side=i%2===0?-1:1, x=side*(350+(i*83)%1050), z=-250-(i*137)%3600;
@@ -127,7 +136,7 @@ for(let i=0;i<90;i++){
  const crown=new THREE.Mesh(new THREE.ConeGeometry(14+(i%4)*3,42+(i%3)*8,7),treeMat);
  crown.position.set(x,34,z);scene.add(crown);
 }
-const islandMat=new THREE.MeshStandardMaterial({color:0x71824f,roughness:1,flatShading:true});
+const islandMat=new THREE.MeshStandardMaterial({color:region===0?0x71824f:0x6f7f4b,roughness:1,flatShading:true});
 for(let i=0;i<7;i++){
  const island=new THREE.Mesh(new THREE.CylinderGeometry(70+i*8,110+i*10,12,9),islandMat);
  island.position.set(1200+(i%3)*260,6,-2450-i*330);scene.add(island);
@@ -304,7 +313,7 @@ const targetCamPos=airplane.position.clone().add(offset);
 camera.position.lerp(targetCamPos,.085);
 camera.lookAt(airplane.position.clone().add(new THREE.Vector3(0,.5,-2).applyQuaternion(airplane.quaternion)));
 checkMissionCollision();}
-function checkMissionCollision(){if(!airplane||!ringTarget)return;const dist=airplane.position.distanceTo(ringTarget.position);if(dist<15){const m=missionData[saveState.currentMission];saveState.credits+=m.reward;const msg=document.getElementById('hud-center-msg');msg.innerHTML='MISSION ERFÜLLT!<br>+'+m.reward+' Credits';msg.style.display='block';saveState.currentMission=(saveState.currentMission+1)%20;saveGame();updateUI();scene.remove(ringTarget);ringTarget=null;setTimeout(()=>{msg.style.display='none';buildMissionRing();},3000);}}
+function checkMissionCollision(){if(!airplane||!ringTarget)return;const dist=airplane.position.distanceTo(ringTarget.position);if(dist<15){const m=missionData[saveState.currentMission];saveState.credits+=m.reward;const msg=document.getElementById('hud-center-msg');const nextMission=saveState.currentMission+1;saveState.currentMission=nextMission%40;saveGame();updateUI();scene.remove(ringTarget);ringTarget=null;if(nextMission===20){msg.innerHTML='REGION ABGESCHLOSSEN!<br>Neue Landschaft wird geladen…';msg.style.display='block';setTimeout(()=>{msg.style.display='none';init3D();buildMissionRing();},3000);}else{msg.innerHTML='MISSION ERFÜLLT!<br>+'+m.reward+' Credits';msg.style.display='block';setTimeout(()=>{msg.style.display='none';buildMissionRing();},3000);}}}
 let gameRunning=false;function animate(){if(!gameRunning)return;requestAnimationFrame(animate);const delta=clock.getDelta();updateFlightPhysics(delta);renderer.render(scene,camera);}
 addEventListener('keydown',e=>{if(!gameRunning)return;switch(e.key.toLowerCase()){case'w':case'arrowup':inputs.pitchUp=true;break;case's':case'arrowdown':inputs.pitchDown=true;break;case'a':case'arrowleft':inputs.rollLeft=true;break;case'd':case'arrowright':inputs.rollRight=true;break;case'r':inputs.throttleUp=true;break;case'f':inputs.throttleDown=true;break;case'escape':gameRunning=false;menuOverlay.style.display='flex';updateUI();break;}});
 addEventListener('keyup',e=>{switch(e.key.toLowerCase()){case'w':case'arrowup':inputs.pitchUp=false;break;case's':case'arrowdown':inputs.pitchDown=false;break;case'a':case'arrowleft':inputs.rollLeft=false;break;case'd':case'arrowright':inputs.rollRight=false;break;case'r':inputs.throttleUp=false;break;case'f':inputs.throttleDown=false;break;}});
