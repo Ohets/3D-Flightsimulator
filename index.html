@@ -74,9 +74,10 @@ missionSelectEl.innerHTML='';missionData.forEach(m=>{const o=document.createElem
 window.selectAircraft=function(idx){saveState.selectedAircraft=idx;saveGame();updateUI();};
 window.buyAircraft=function(idx){const p=aircraftData[idx].price;if(saveState.credits>=p){saveState.credits-=p;saveState.unlockedAircraft.push(idx);saveState.selectedAircraft=idx;saveGame();updateUI();}else alert("Nicht genug Credits! Fliege erst Missionen, um Credits zu verdienen.");};
 function init3D(){
-const c=document.getElementById('canvas-container');c.innerHTML='';scene=new THREE.Scene();scene.background=new THREE.Color(0x87ceeb);scene.fog=new THREE.FogExp2(0x87ceeb,.0015);camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,5000);renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;c.appendChild(renderer.domElement);
+const c=document.getElementById('canvas-container');c.innerHTML='';scene=new THREE.Scene();scene.background=new THREE.Color(0x87ceeb);scene.fog=new THREE.FogExp2(0x87ceeb,.00055);camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,9000);renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;c.appendChild(renderer.domElement);
 scene.add(new THREE.AmbientLight(0xffffff,.6));const sun=new THREE.DirectionalLight(0xfffaed,.8);sun.position.set(500,1000,500);scene.add(sun);
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(10000,10000,32,32),new THREE.MeshStandardMaterial({color:0x557a46,roughness:.9,metalness:.1,flatShading:true}));ground.rotation.x=-Math.PI/2;scene.add(ground);buildScenery();
+buildAirportExpansion();
 const runway=new THREE.Mesh(new THREE.PlaneGeometry(60,800),new THREE.MeshStandardMaterial({color:0x333333,roughness:.8}));runway.rotation.x=-Math.PI/2;runway.position.set(0,.1,-250);scene.add(runway);
 const lineGeo=new THREE.PlaneGeometry(2,40),lineMat=new THREE.MeshBasicMaterial({color:0xffffff});for(let z=-600;z<=100;z+=100){const l=new THREE.Mesh(lineGeo,lineMat);l.rotation.x=-Math.PI/2;l.position.set(0,.2,z);scene.add(l);}
 buildAirplaneModel();buildMissionRing();physics.speed=0;physics.throttle=0;airplane.position.set(0,2,0);airplane.rotation.set(0,Math.PI,0);addEventListener('resize',onWindowResize,false);}
@@ -132,6 +133,73 @@ for(let i=0;i<7;i++){
  island.position.set(1200+(i%3)*260,6,-2450-i*330);scene.add(island);
 }
 }
+
+function buildAirportExpansion(){
+ const concreteMat=new THREE.MeshStandardMaterial({color:0x777b80,roughness:.9});
+ const darkMat=new THREE.MeshStandardMaterial({color:0x30343a,roughness:.85});
+ const glassMat=new THREE.MeshStandardMaterial({color:0x4aa8c7,transparent:true,opacity:.55,roughness:.15,metalness:.15});
+ const whiteMat=new THREE.MeshStandardMaterial({color:0xe8e8e8,roughness:.55});
+ const yellowMat=new THREE.MeshStandardMaterial({color:0xf2c300,roughness:.7});
+ // apron and taxiway
+ const apron=new THREE.Mesh(new THREE.PlaneGeometry(520,420),concreteMat);
+ apron.rotation.x=-Math.PI/2;apron.position.set(150,.08,-180);scene.add(apron);
+ const taxi=new THREE.Mesh(new THREE.PlaneGeometry(28,500),darkMat);
+ taxi.rotation.x=-Math.PI/2;taxi.position.set(70,.1,-210);scene.add(taxi);
+ // taxiway center markings
+ for(let z=-450;z<40;z+=45){
+  const mark=new THREE.Mesh(new THREE.PlaneGeometry(2.5,18),yellowMat);
+  mark.rotation.x=-Math.PI/2;mark.position.set(70,.13,z);scene.add(mark);
+ }
+ // control tower
+ const towerBase=new THREE.Mesh(new THREE.BoxGeometry(24,48,24),concreteMat);
+ towerBase.position.set(300,24,-120);scene.add(towerBase);
+ const towerTop=new THREE.Mesh(new THREE.BoxGeometry(34,10,34),darkMat);
+ towerTop.position.set(300,53,-120);scene.add(towerTop);
+ const windows=new THREE.Mesh(new THREE.BoxGeometry(36,7,36),glassMat);
+ windows.position.set(300,55,-120);scene.add(windows);
+ const roof=new THREE.Mesh(new THREE.CylinderGeometry(18,18,3,8),darkMat);
+ roof.position.set(300,61,-120);scene.add(roof);
+ // tower antenna
+ const mast=new THREE.Mesh(new THREE.CylinderGeometry(.8,.8,22,6),darkMat);
+ mast.position.set(300,73,-120);scene.add(mast);
+ const beacon=new THREE.Mesh(new THREE.SphereGeometry(2.5,8,8),new THREE.MeshBasicMaterial({color:0xff2222}));
+ beacon.position.set(300,85,-120);scene.add(beacon);
+ // terminal
+ const terminal=new THREE.Mesh(new THREE.BoxGeometry(150,30,55),whiteMat);
+ terminal.position.set(220,15,-300);scene.add(terminal);
+ const terminalRoof=new THREE.Mesh(new THREE.BoxGeometry(160,5,65),darkMat);
+ terminalRoof.position.set(220,33,-300);scene.add(terminalRoof);
+ for(let i=0;i<7;i++){
+  const win=new THREE.Mesh(new THREE.BoxGeometry(16,10,1),glassMat);
+  win.position.set(160+i*20,20,-328);scene.add(win);
+ }
+ // parked aircraft: lightweight stylized models
+ const makeParkedPlane=(x,z,scale=1,rot=0,color=0xffffff)=>{
+  const g=new THREE.Group();
+  const mat=new THREE.MeshStandardMaterial({color,roughness:.5});
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1,13,8),mat);
+  body.rotation.x=Math.PI/2;g.add(body);
+  const wing=new THREE.Mesh(new THREE.BoxGeometry(22,0.45,3),mat);wing.position.y=.2;g.add(wing);
+  const tail=new THREE.Mesh(new THREE.BoxGeometry(7,.35,2),mat);tail.position.z=5;g.add(tail);
+  const fin=new THREE.Mesh(new THREE.BoxGeometry(.35,3,2.5),mat);fin.position.set(0,1.5,5);g.add(fin);
+  [-6,6].forEach(px=>{
+   const eng=new THREE.Mesh(new THREE.CylinderGeometry(.7,.6,3,8),darkMat);
+   eng.rotation.x=Math.PI/2;eng.position.set(px,-.2,0);g.add(eng);
+  });
+  g.scale.setScalar(scale);g.rotation.y=rot;g.position.set(x,2,z);scene.add(g);
+ };
+ makeParkedPlane(130,-120,1.3,.1,0xffffff);
+ makeParkedPlane(190,-110,.9,Math.PI*.9,0x3182ce);
+ makeParkedPlane(120,-230,1.05,-.15,0xdd6b20);
+ makeParkedPlane(300,-250,.75,Math.PI/2,0xe2e8f0);
+ makeParkedPlane(360,-190,.65,Math.PI/2,0x4a5568);
+ // hangar
+ const hangar=new THREE.Mesh(new THREE.BoxGeometry(105,35,75),darkMat);
+ hangar.position.set(20,17,-350);scene.add(hangar);
+ const hangarDoor=new THREE.Mesh(new THREE.BoxGeometry(55,25,1),glassMat);
+ hangarDoor.position.set(20,13,-388);scene.add(hangarDoor);
+}
+
 function buildAirplaneModel(){
 const ac=aircraftData[saveState.selectedAircraft];airplane=new THREE.Group();const bodyGeo=new THREE.CylinderGeometry(1.2,.8,8,8);bodyGeo.rotateX(Math.PI/2);const bodyMat=new THREE.MeshStandardMaterial({color:ac.color,roughness:.4});const fuselage=new THREE.Mesh(bodyGeo,bodyMat);airplane.add(fuselage);
 const cockpit=new THREE.Mesh(new THREE.BoxGeometry(1.4,.8,1.5),new THREE.MeshStandardMaterial({color:0x00dfff,transparent:true,opacity:.6}));cockpit.position.set(0,.6,-1.8);airplane.add(cockpit);
@@ -153,7 +221,7 @@ airplane.rotateX(physics.pitchSpeed*delta);airplane.rotateZ(physics.rollSpeed*de
 let localVelocity=new THREE.Vector3(0,0,-physics.speed).applyQuaternion(airplane.quaternion),verticalNetChange=lift-gravity;if(airplane.position.y<=1.2&&verticalNetChange<0){verticalNetChange=0;if(physics.speed<5){airplane.rotation.z*=.8;airplane.rotation.x*=.8;}}
 airplane.position.x+=localVelocity.x*delta*10;airplane.position.y+=(localVelocity.y+verticalNetChange)*delta*10;airplane.position.z+=localVelocity.z*delta*10;if(airplane.position.y<1.2){airplane.position.y=1.2;if(physics.throttle===0)physics.speed*=.95;}
 document.getElementById('hud-speed').innerText=Math.round(physics.speed*8);document.getElementById('hud-altitude').innerText=Math.round(airplane.position.y*5);if(ringTarget)ringTarget.rotation.y+=delta*.5;
-const offset=new THREE.Vector3(0,3.5,12).applyQuaternion(airplane.quaternion),targetCamPos=airplane.position.clone().add(offset);camera.position.lerp(targetCamPos,.1);camera.lookAt(airplane.position.clone().add(new THREE.Vector3(0,.5,-2).applyQuaternion(airplane.quaternion)));checkMissionCollision();}
+const offset=new THREE.Vector3(0,4.2,16).applyQuaternion(airplane.quaternion),targetCamPos=airplane.position.clone().add(offset);camera.position.lerp(targetCamPos,.085);camera.lookAt(airplane.position.clone().add(new THREE.Vector3(0,.5,-2).applyQuaternion(airplane.quaternion)));checkMissionCollision();}
 function checkMissionCollision(){if(!airplane||!ringTarget)return;const dist=airplane.position.distanceTo(ringTarget.position);if(dist<15){const m=missionData[saveState.currentMission];saveState.credits+=m.reward;const msg=document.getElementById('hud-center-msg');msg.innerHTML='MISSION ERFÜLLT!<br>+'+m.reward+' Credits';msg.style.display='block';saveState.currentMission=(saveState.currentMission+1)%20;saveGame();updateUI();scene.remove(ringTarget);ringTarget=null;setTimeout(()=>{msg.style.display='none';buildMissionRing();},3000);}}
 let gameRunning=false;function animate(){if(!gameRunning)return;requestAnimationFrame(animate);const delta=clock.getDelta();updateFlightPhysics(delta);renderer.render(scene,camera);}
 addEventListener('keydown',e=>{if(!gameRunning)return;switch(e.key.toLowerCase()){case'w':case'arrowup':inputs.pitchUp=true;break;case's':case'arrowdown':inputs.pitchDown=true;break;case'a':case'arrowleft':inputs.rollLeft=true;break;case'd':case'arrowright':inputs.rollRight=true;break;case'r':inputs.throttleUp=true;break;case'f':inputs.throttleDown=true;break;case'escape':gameRunning=false;menuOverlay.style.display='flex';updateUI();break;}});
