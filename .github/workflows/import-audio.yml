@@ -20,6 +20,8 @@ jobs:
           curl -L --fail --retry 3 -o assets/audio/engine.wav https://assets.mixkit.co/active_storage/sfx/1574/1574.wav
           curl -L --fail --retry 3 -o assets/audio/rain.wav https://assets.mixkit.co/active_storage/sfx/2393/2393.wav
           curl -L --fail --retry 3 -o assets/audio/wind.wav https://assets.mixkit.co/active_storage/sfx/2658/2658.wav
+          curl -L --fail --retry 3 -o assets/audio/propeller-cc0.wav https://raw.githubusercontent.com/OpenTTD/OpenSFX/master/src/wav/osfx_69.wav
+          curl -L --fail --retry 3 -o assets/audio/propeller-mixkit.wav https://assets.mixkit.co/active_storage/sfx/2704/2704.wav
       - name: Add audio license notice
         run: |
           cat > assets/audio/README.md <<'EOF'
@@ -31,6 +33,8 @@ jobs:
           - Jet plane hum flying (1574)
           - Light rain loop (2393)
           - Wind blowing ambience (2658)
+          - Airplane propeller (OpenSFX osfx_69), original by MrVasLuk, CC0 1.0
+          - Helicopter propellers in the sky (Mixkit 2704)
 
           The files are downloaded into this repository by GitHub Actions so the game can use them locally.
           EOF
