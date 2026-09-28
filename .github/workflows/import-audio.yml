@@ -1,0 +1,43 @@
+name: Import CC0-free flight audio
+
+on:
+  push:
+    paths:
+      - ".github/workflows/import-audio.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-audio:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download audio assets
+        run: |
+          mkdir -p assets/audio
+          curl -L --fail --retry 3 -o assets/audio/engine.wav https://assets.mixkit.co/active_storage/sfx/1574/1574.wav
+          curl -L --fail --retry 3 -o assets/audio/rain.wav https://assets.mixkit.co/active_storage/sfx/2393/2393.wav
+          curl -L --fail --retry 3 -o assets/audio/wind.wav https://assets.mixkit.co/active_storage/sfx/2658/2658.wav
+      - name: Add audio license notice
+        run: |
+          cat > assets/audio/README.md <<'EOF'
+          # Flight simulator audio
+
+          Sources: Mixkit Free Sound Effects.
+          License: Mixkit Sound Effects License (free use subject to the license terms).
+          Source files:
+          - Jet plane hum flying (1574)
+          - Light rain loop (2393)
+          - Wind blowing ambience (2658)
+
+          The files are downloaded into this repository by GitHub Actions so the game can use them locally.
+          EOF
+      - name: Commit local audio
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/audio
+          git diff --cached --quiet || git commit -m "Add local flight simulator audio assets"
+          git push
