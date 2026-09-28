@@ -366,18 +366,17 @@ function initLocalAudio(){
  if(localAudio)return;
  const propFiles=['assets/audio/propeller-cc0.wav','assets/audio/propeller-mixkit.wav'];
  const propIndex=saveState.selectedAircraft%2;
- localAudio={engine:new Audio('assets/audio/engine.wav'),rain:new Audio('assets/audio/rain.wav'),wind:new Audio('assets/audio/wind.wav'),propeller:new Audio(propFiles[propIndex])};
- localAudio.engine.loop=true;localAudio.rain.loop=true;localAudio.wind.loop=true;localAudio.propeller.loop=true;
- localAudio.engine.volume=0;localAudio.rain.volume=.13;localAudio.wind.volume=.05;localAudio.propeller.volume=propProfiles[saveState.selectedAircraft%10][1];
+ localAudio={rain:new Audio('assets/audio/rain.wav'),wind:new Audio('assets/audio/wind.wav'),propeller:new Audio(propFiles[propIndex])};
+ localAudio.rain.loop=true;localAudio.wind.loop=true;localAudio.propeller.loop=true;
+ localAudio.rain.volume=.13;localAudio.wind.volume=.05;localAudio.propeller.volume=propProfiles[saveState.selectedAircraft%10][1];
  localAudio.propeller.playbackRate=propProfiles[saveState.selectedAircraft%10][0];
 }
 function startLocalAudio(){initLocalAudio();[localAudio.engine,localAudio.rain,localAudio.wind].forEach(a=>a.play().catch(()=>{}));}
-function stopLocalAudio(){if(!localAudio)return;[localAudio.engine,localAudio.rain,localAudio.wind,localAudio.propeller].forEach(a=>{a.pause();a.currentTime=0;});}
+function stopLocalAudio(){if(!localAudio)return;[localAudio.rain,localAudio.wind,localAudio.propeller].forEach(a=>{a.pause();a.currentTime=0;});}
 function updateLocalAudio(){
  if(!localAudio||!airplane)return;
  const speed=Math.max(0,physics.speed||0),throttle=Math.max(0,Math.min(1,physics.throttle||0));
  const profile=propProfiles[saveState.selectedAircraft%10];
- localAudio.engine.volume=Math.min(.42,.12+throttle*.30+Math.min(speed/180,1)*.08);
  localAudio.wind.volume=Math.min(.24,.025+Math.min(speed/160,1)*.20);
  localAudio.rain.volume=.13;
  localAudio.propeller.volume=Math.min(.55,profile[1]+throttle*.12);
