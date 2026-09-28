@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D Flight Simulator</title>
+    <style>
+        body, html { margin:0; padding:0; overflow:hidden; width:100%; height:100%; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; user-select:none; -webkit-user-select:none; background-color:#000; }
+        #canvas-container { width:100%; height:100%; position:absolute; top:0; left:0; z-index:1; }
+        .ui-panel { position:absolute; z-index:10; color:white; text-shadow:2px 2px 4px rgba(0,0,0,.8); pointer-events:none; }
+        #hud-top { top:15px; left:15px; font-size:18px; font-weight:bold; background:rgba(0,0,0,.4); padding:10px 15px; border-radius:8px; border-left:4px solid #00ffcc; }
+        #hud-center-msg { top:30%; left:50%; transform:translate(-50%,-50%); font-size:28px; font-weight:bold; text-align:center; color:#ffff00; display:none; background:rgba(0,0,0,.6); padding:15px 30px; border-radius:10px; animation:pulse 1.5s infinite; }
+        @keyframes pulse { 0%{transform:translate(-50%,-50%) scale(1)} 50%{transform:translate(-50%,-50%) scale(1.05)} 100%{transform:translate(-50%,-50%) scale(1)} }
+        .touch-container { position:absolute; bottom:20px; z-index:20; display:flex; justify-content:space-between; width:100%; padding:0 20px; box-sizing:border-box; pointer-events:none; }
+        .control-group { display:flex; gap:15px; pointer-events:auto; }
+        .btn-touch { width:70px; height:70px; background:rgba(255,255,255,.2); border:2px solid rgba(255,255,255,.6); border-radius:50%; color:white; font-size:24px; font-weight:bold; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(5px); touch-action:manipulation; }
+        .btn-touch:active { background:rgba(0,255,200,.5); border-color:#00ffcc; transform:scale(.95); }
+        .vertical-controls { flex-direction:column; }
+        .throttle-container { display:flex; flex-direction:column; align-items:center; background:rgba(0,0,0,.5); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,.2); }
+        .throttle-label { color:white; font-size:12px; margin-bottom:5px; font-weight:bold; }
+        #menu-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg,rgba(15,32,67,.95) 0%,rgba(27,49,85,.95) 100%); z-index:100; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; padding:20px; box-sizing:border-box; }
+        #menu-overlay h1 { margin-top:0; margin-bottom:5px; font-size:32px; letter-spacing:2px; color:#00ffcc; text-shadow:0 0 10px rgba(0,255,200,.5); text-align:center; }
+        #menu-overlay p { margin-bottom:20px; color:#a0aec0; text-align:center; }
+        .shop-container { display:flex; gap:15px; overflow-x:auto; width:100%; max-width:900px; padding:15px 5px; margin-bottom:20px; scrollbar-width:thin; }
+        .shop-item { flex:0 0 220px; background:rgba(255,255,255,.05); border:2px solid rgba(255,255,255,.1); border-radius:12px; padding:15px; text-align:center; transition:all .3s ease; display:flex; flex-direction:column; justify-content:space-between; }
+        .shop-item.selected { border-color:#00ffcc; background:rgba(0,255,200,.1); box-shadow:0 0 15px rgba(0,255,200,.3); }
+        .shop-item h3 { margin:0 0 10px; font-size:18px; }
+        .stats-bar { background:rgba(255,255,255,.1); height:6px; border-radius:3px; margin:8px 0; overflow:hidden; text-align:left; }
+        .stats-fill { height:100%; background:#00ffcc; }
+        .shop-btn { background:#00ffcc; color:#0f2043; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer; margin-top:10px; width:100%; }
+        .shop-btn.locked { background:#e53e3e; color:white; } .shop-btn.owned { background:#4a5568; color:#cbd5e0; }
+        .mission-selector { width:100%; max-width:500px; background:rgba(0,0,0,.3); padding:10px; border-radius:8px; margin-bottom:25px; border:1px solid rgba(255,255,255,.1); }
+        .mission-selector label { display:block; margin-bottom:5px; font-weight:bold; color:#00ffcc; }
+        .mission-selector select { width:100%; padding:10px; background:#1a202c; color:white; border:1px solid #4a5568; border-radius:6px; font-size:16px; outline:none; }
+        #start-btn { background:linear-gradient(90deg,#00ffcc,#00bfff); color:#0f2043; font-size:22px; font-weight:bold; padding:15px 60px; border:none; border-radius:30px; cursor:pointer; box-shadow:0 4px 15px rgba(0,255,200,.4); transition:transform .2s; }
+        #start-btn:active { transform:scale(.95); } #credits-display { font-size:20px; color:#ffff00; font-weight:bold; margin-bottom:15px; background:rgba(0,0,0,.3); padding:5px 15px; border-radius:20px; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+<div id="canvas-container"></div>
+<div id="hud-top" class="ui-panel">Flugzeug: <span id="hud-plane-name">-</span><br>Credits: <span id="hud-credits" style="color:#ffff00;">0</span><br>Geschwindigkeit: <span id="hud-speed">0</span> km/h (Schub: <span id="hud-throttle">0</span>%)<br>Höhe: <span id="hud-altitude">0</span> m<br><span id="hud-mission-desc" style="color:#00ffcc;font-size:15px;">Mission: Fliege durch den Ring!</span></div>
+<div id="hud-center-msg" class="ui-panel">MISSION ERFÜLLT!<br>+50 Credits</div>
+<div class="touch-container">
+<div class="control-group"><div class="throttle-container"><span class="throttle-label">SCHUB</span><button class="btn-touch" id="btn-throttle-up">▲</button><div style="height:10px;"></div><button class="btn-touch" id="btn-throttle-down">▼</button></div><div class="vertical-controls" style="display:flex;flex-direction:row;align-items:center;gap:10px;"><button class="btn-touch" id="btn-roll-left">◀</button><button class="btn-touch" id="btn-roll-right">▶</button></div></div>
+<div class="control-group vertical-controls" style="justify-content:center;"><button class="btn-touch" id="btn-pitch-down">▲</button><div style="height:15px;text-align:center;color:rgba(255,255,255,.4);font-size:12px;font-weight:bold;">PITCH</div><button class="btn-touch" id="btn-pitch-up">▼</button></div>
+</div>
+<div id="menu-overlay"><h1>TURBOPROP FLIGHT SIMULATOR</h1><p>HTML5 Android Prototyp (20 Missionen & 10 Flugzeuge)</p><div id="credits-display">Deine Credits: <span id="menu-credits">0</span> 🪙</div><div class="shop-container" id="shop-list"></div><div class="mission-selector"><label for="mission-select">Mission auswählen (1-20):</label><select id="mission-select"></select></div><button id="start-btn">FLUG STARTEN</button></div>
+<script>
+let saveState={credits:0,unlockedAircraft:[0],selectedAircraft:0,currentMission:0};
+if(localStorage.getItem('turboprop_sim_save')){try{saveState=JSON.parse(localStorage.getItem('turboprop_sim_save'));}catch(e){console.error(e);}}
+function saveGame(){localStorage.setItem('turboprop_sim_save',JSON.stringify(saveState));}
+const aircraftData=[
+{name:"Cessna Trainer",price:0,speedMax:40,handling:1.5,liftFactor:.12,color:0xffffff,desc:"Perfekt für Einsteiger."},
+{name:"Twin Turboprop",price:50,speedMax:55,handling:1.1,liftFactor:.15,color:0x3182ce,desc:"Klassisches Regional-Frachtflugzeug."},
+{name:"C-130 Hercules",price:120,speedMax:50,handling:.8,liftFactor:.2,color:0x4a5568,desc:"Schweres, vierpropelleriges Militärflugzeug."},
+{name:"Water Bomber",price:200,speedMax:52,handling:1,liftFactor:.18,color:0xdd6b20,desc:"Löschflugzeug für Spezialeinsätze."},
+{name:"Regional Airliner",price:350,speedMax:65,handling:.9,liftFactor:.16,color:0xe2e8f0,desc:"Ziviles Passagierflugzeug."},
+{name:"Military Cargo Jet",price:500,speedMax:75,handling:.7,liftFactor:.22,color:0x2d3748,desc:"Überschall-Frachttransporter."},
+{name:"Supersonic Interceptor",price:750,speedMax:110,handling:2,liftFactor:.1,color:0xe53e3e,desc:"Extrem schnell und wendig."},
+{name:"Concept VTOL X",price:1000,speedMax:85,handling:1.8,liftFactor:.25,color:0x805ad5,desc:"Zukunftsweisendes Hybridflugzeug."},
+{name:"Heavy Cargo Titan",price:1500,speedMax:60,handling:.5,liftFactor:.3,color:0x234e52,desc:"Das größte Flugzeug der Flotte."},
+{name:"Stealth Ghost Jet",price:2500,speedMax:120,handling:2.2,liftFactor:.14,color:0x1a202c,desc:"Das ultimative High-End Flugzeug."}];
+const missionData=[];
+for(let i=1;i<=20;i++)missionData.push({id:i-1,name:"Mission "+i+": "+(i===1?"Erster Start":i<=5?"Höhentraining":i<=10?"Präzisionsflug":i<=15?"Schwerer Navigationkurs":"Extremes Manöver"),targetPos:{x:Math.sin(i*1.5)*(200+i*50),y:40+i*12+Math.cos(i)*20,z:-300-i*180},reward:30+i*20,desc:"Fliege präzise durch den markierten Kontrollring am Himmel."});
+let scene,camera,renderer,airplane,propellerLeft,propellerRight,ringTarget,clock=new THREE.Clock();
+let physics={speed:0,throttle:0,pitchSpeed:0,rollSpeed:0,yawSpeed:0,altitude:0,velocity:new THREE.Vector3(0,0,0),orientation:new THREE.Quaternion()};
+let inputs={pitchUp:false,pitchDown:false,rollLeft:false,rollRight:false,throttleUp:false,throttleDown:false};
+const shopListEl=document.getElementById('shop-list'),missionSelectEl=document.getElementById('mission-select'),menuOverlay=document.getElementById('menu-overlay');
+function updateUI(){
+document.getElementById('menu-credits').innerText=saveState.credits;document.getElementById('hud-credits').innerText=saveState.credits;shopListEl.innerHTML='';
+aircraftData.forEach((ac,idx)=>{const u=saveState.unlockedAircraft.includes(idx),s=saveState.selectedAircraft===idx,item=document.createElement('div');item.className="shop-item "+(s?"selected":"");const speedPct=ac.speedMax/120*100,handPct=ac.handling/2.5*100;item.innerHTML='<div><h3>'+ac.name+'</h3><p style="font-size:11px;color:#a0aec0;margin:0 0 10px">'+ac.desc+'</p><div style="font-size:11px;text-align:left">SPEED ('+ac.speedMax*8+' km/h)</div><div class="stats-bar"><div class="stats-fill" style="width:'+speedPct+'%"></div></div><div style="font-size:11px;text-align:left">HANDLING</div><div class="stats-bar"><div class="stats-fill" style="width:'+handPct+'%;background:#00bfff"></div></div></div><div>'+ (u?'<button class="shop-btn '+(s?'':'owned')+'" onclick="selectAircraft('+idx+')">'+(s?'Ausgewählt':'Wählen')+'</button>':'<button class="shop-btn locked" onclick="buyAircraft('+idx+')">Kaufen: '+ac.price+' C</button>')+'</div>';shopListEl.appendChild(item);});
+missionSelectEl.innerHTML='';missionData.forEach(m=>{const o=document.createElement('option');o.value=m.id;o.selected=saveState.currentMission===m.id;o.innerText=m.name+' (+'+m.reward+' Credits)';missionSelectEl.appendChild(o);});}
+window.selectAircraft=function(idx){saveState.selectedAircraft=idx;saveGame();updateUI();};
+window.buyAircraft=function(idx){const p=aircraftData[idx].price;if(saveState.credits>=p){saveState.credits-=p;saveState.unlockedAircraft.push(idx);saveState.selectedAircraft=idx;saveGame();updateUI();}else alert("Nicht genug Credits! Fliege erst Missionen, um Credits zu verdienen.");};
+function init3D(){
+const c=document.getElementById('canvas-container');c.innerHTML='';scene=new THREE.Scene();scene.background=new THREE.Color(0x87ceeb);scene.fog=new THREE.FogExp2(0x87ceeb,.0015);camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,5000);renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;c.appendChild(renderer.domElement);
+scene.add(new THREE.AmbientLight(0xffffff,.6));const sun=new THREE.DirectionalLight(0xfffaed,.8);sun.position.set(500,1000,500);scene.add(sun);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(10000,10000,32,32),new THREE.MeshStandardMaterial({color:0x557a46,roughness:.9,metalness:.1,flatShading:true}));ground.rotation.x=-Math.PI/2;scene.add(ground);
+const runway=new THREE.Mesh(new THREE.PlaneGeometry(60,800),new THREE.MeshStandardMaterial({color:0x333333,roughness:.8}));runway.rotation.x=-Math.PI/2;runway.position.set(0,.1,-250);scene.add(runway);
+const lineGeo=new THREE.PlaneGeometry(2,40),lineMat=new THREE.MeshBasicMaterial({color:0xffffff});for(let z=-600;z<=100;z+=100){const l=new THREE.Mesh(lineGeo,lineMat);l.rotation.x=-Math.PI/2;l.position.set(0,.2,z);scene.add(l);}
+buildAirplaneModel();buildMissionRing();physics.speed=0;physics.throttle=0;airplane.position.set(0,2,0);airplane.rotation.set(0,Math.PI,0);addEventListener('resize',onWindowResize,false);}
+function buildAirplaneModel(){
+const ac=aircraftData[saveState.selectedAircraft];airplane=new THREE.Group();const bodyGeo=new THREE.CylinderGeometry(1.2,.8,8,8);bodyGeo.rotateX(Math.PI/2);const bodyMat=new THREE.MeshStandardMaterial({color:ac.color,roughness:.4});const fuselage=new THREE.Mesh(bodyGeo,bodyMat);airplane.add(fuselage);
+const cockpit=new THREE.Mesh(new THREE.BoxGeometry(1.4,.8,1.5),new THREE.MeshStandardMaterial({color:0x00dfff,transparent:true,opacity:.6}));cockpit.position.set(0,.6,-1.8);airplane.add(cockpit);
+const wing=new THREE.Mesh(new THREE.BoxGeometry(16,.2,2.2),bodyMat);wing.position.set(0,.5,-.5);airplane.add(wing);
+const tailH=new THREE.Mesh(new THREE.BoxGeometry(5,.1,1.2),bodyMat);tailH.position.set(0,.3,3.2);airplane.add(tailH);
+const tailVGeo=new THREE.BoxGeometry(.1,2.2,1.5);tailVGeo.rotateX(Math.PI/6);const tailV=new THREE.Mesh(tailVGeo,bodyMat);tailV.position.set(0,1.2,3.2);airplane.add(tailV);
+const engineGeo=new THREE.CylinderGeometry(.5,.4,2,8);engineGeo.rotateX(Math.PI/2);const engineMat=new THREE.MeshStandardMaterial({color:0x222222});const engLeft=new THREE.Mesh(engineGeo,engineMat);engLeft.position.set(-4,.4,-1);airplane.add(engLeft);const engRight=engLeft.clone();engRight.position.x=4;airplane.add(engRight);
+const propGeo=new THREE.BoxGeometry(2.8,.2,.05),propMat=new THREE.MeshStandardMaterial({color:0x111111,metalness:.8});propellerLeft=new THREE.Mesh(propGeo,propMat);propellerLeft.position.set(-4,.4,-2.05);airplane.add(propellerLeft);propellerRight=propellerLeft.clone();propellerRight.position.x=4;airplane.add(propellerRight);scene.add(airplane);document.getElementById('hud-plane-name').innerText=ac.name;}
+function buildMissionRing(){if(ringTarget)scene.remove(ringTarget);const m=missionData[saveState.currentMission];ringTarget=new THREE.Mesh(new THREE.TorusGeometry(12,1.5,8,24),new THREE.MeshBasicMaterial({color:0xffff00}));ringTarget.position.set(m.targetPos.x,m.targetPos.y,m.targetPos.z);scene.add(ringTarget);document.getElementById('hud-mission-desc').innerText='Ziel: '+m.name+' - '+m.desc;}
+function onWindowResize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}
+function updateFlightPhysics(delta){
+if(!airplane)return;const ac=aircraftData[saveState.selectedAircraft];if(inputs.throttleUp)physics.throttle=Math.min(100,physics.throttle+delta*35);if(inputs.throttleDown)physics.throttle=Math.max(0,physics.throttle-delta*35);document.getElementById('hud-throttle').innerText=Math.round(physics.throttle);
+if(propellerLeft&&propellerRight){const rs=physics.throttle/100*1.5+.1;propellerLeft.rotation.z+=rs;propellerRight.rotation.z-=rs;}
+let targetSpeed=physics.throttle/100*ac.speedMax;const forwardVector=new THREE.Vector3(0,0,-1).applyQuaternion(airplane.quaternion),pitchInclination=forwardVector.y;targetSpeed-=pitchInclination*15;if(targetSpeed<0)targetSpeed=0;physics.speed+=(targetSpeed-physics.speed)*delta*1.2;
+const lift=physics.speed*physics.speed*ac.liftFactor*.05,gravity=9.81*.15,handlingFactor=ac.handling;
+if(inputs.pitchUp)physics.pitchSpeed=Math.min(1.2,physics.pitchSpeed+delta*4*handlingFactor);else if(inputs.pitchDown)physics.pitchSpeed=Math.max(-1.2,physics.pitchSpeed-delta*4*handlingFactor);else physics.pitchSpeed*=.9;
+if(inputs.rollLeft)physics.rollSpeed=Math.min(1.5,physics.rollSpeed+delta*5*handlingFactor);else if(inputs.rollRight)physics.rollSpeed=Math.max(-1.5,physics.rollSpeed-delta*5*handlingFactor);else physics.rollSpeed*=.9;
+airplane.rotateX(physics.pitchSpeed*delta);airplane.rotateZ(physics.rollSpeed*delta);const euler=new THREE.Euler().setFromQuaternion(airplane.quaternion,'YXZ'),rollAngle=euler.z;airplane.rotateY(-rollAngle*delta*.4);
+let localVelocity=new THREE.Vector3(0,0,-physics.speed).applyQuaternion(airplane.quaternion),verticalNetChange=lift-gravity;if(airplane.position.y<=1.2&&verticalNetChange<0){verticalNetChange=0;if(physics.speed<5){airplane.rotation.z*=.8;airplane.rotation.x*=.8;}}
+airplane.position.x+=localVelocity.x*delta*10;airplane.position.y+=(localVelocity.y+verticalNetChange)*delta*10;airplane.position.z+=localVelocity.z*delta*10;if(airplane.position.y<1.2){airplane.position.y=1.2;if(physics.throttle===0)physics.speed*=.95;}
+document.getElementById('hud-speed').innerText=Math.round(physics.speed*8);document.getElementById('hud-altitude').innerText=Math.round(airplane.position.y*5);if(ringTarget)ringTarget.rotation.y+=delta*.5;
+const offset=new THREE.Vector3(0,3.5,12).applyQuaternion(airplane.quaternion),targetCamPos=airplane.position.clone().add(offset);camera.position.lerp(targetCamPos,.1);camera.lookAt(airplane.position.clone().add(new THREE.Vector3(0,.5,-2).applyQuaternion(airplane.quaternion)));checkMissionCollision();}
+function checkMissionCollision(){if(!airplane||!ringTarget)return;const dist=airplane.position.distanceTo(ringTarget.position);if(dist<15){const m=missionData[saveState.currentMission];saveState.credits+=m.reward;const msg=document.getElementById('hud-center-msg');msg.innerHTML='MISSION ERFÜLLT!<br>+'+m.reward+' Credits';msg.style.display='block';saveState.currentMission=(saveState.currentMission+1)%20;saveGame();updateUI();scene.remove(ringTarget);ringTarget=null;setTimeout(()=>{msg.style.display='none';buildMissionRing();},3000);}}
+let gameRunning=false;function animate(){if(!gameRunning)return;requestAnimationFrame(animate);const delta=clock.getDelta();updateFlightPhysics(delta);renderer.render(scene,camera);}
+addEventListener('keydown',e=>{if(!gameRunning)return;switch(e.key.toLowerCase()){case'w':case'arrowup':inputs.pitchUp=true;break;case's':case'arrowdown':inputs.pitchDown=true;break;case'a':case'arrowleft':inputs.rollLeft=true;break;case'd':case'arrowright':inputs.rollRight=true;break;case'r':inputs.throttleUp=true;break;case'f':inputs.throttleDown=true;break;case'escape':gameRunning=false;menuOverlay.style.display='flex';updateUI();break;}});
+addEventListener('keyup',e=>{switch(e.key.toLowerCase()){case'w':case'arrowup':inputs.pitchUp=false;break;case's':case'arrowdown':inputs.pitchDown=false;break;case'a':case'arrowleft':inputs.rollLeft=false;break;case'd':case'arrowright':inputs.rollRight=false;break;case'r':inputs.throttleUp=false;break;case'f':inputs.throttleDown=false;break;}});
+function bindTouchBtn(id,p){const b=document.getElementById(id);if(!b)return;const s=e=>{e.preventDefault();inputs[p]=true},x=e=>{e.preventDefault();inputs[p]=false};b.addEventListener('touchstart',s,{passive:false});b.addEventListener('touchend',x,{passive:false});b.addEventListener('touchcancel',x,{passive:false});b.addEventListener('mousedown',()=>inputs[p]=true);b.addEventListener('mouseup',()=>inputs[p]=false);b.addEventListener('mouseleave',()=>inputs[p]=false);}
+bindTouchBtn('btn-throttle-up','throttleUp');bindTouchBtn('btn-throttle-down','throttleDown');bindTouchBtn('btn-roll-left','rollLeft');bindTouchBtn('btn-roll-right','rollRight');bindTouchBtn('btn-pitch-up','pitchUp');bindTouchBtn('btn-pitch-down','pitchDown');
+document.getElementById('start-btn').addEventListener('click',()=>{saveState.currentMission=parseInt(missionSelectEl.value);saveGame();menuOverlay.style.display='none';gameRunning=true;init3D();clock.getDelta();animate();});updateUI();
+</script>
+</body>
+</html>
