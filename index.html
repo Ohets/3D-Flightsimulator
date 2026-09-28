@@ -366,7 +366,7 @@ function initLocalAudio(){
  if(localAudio)return;
  const propFiles=['assets/audio/propeller-cc0.wav','assets/audio/propeller-mixkit.wav'];
  const propIndex=saveState.selectedAircraft%2;
- localAudio={rain:new Audio('assets/audio/rain.wav'),wind:new Audio('assets/audio/wind.wav'),idlePropeller:new Audio(propFiles[propIndex]),propeller:new Audio(propFiles[propIndex])};
+ localAudio={rain:new Audio('assets/audio/rain.wav'),wind:new Audio('assets/audio/wind.wav'),idlePropeller:new Audio('assets/audio/idle-propeller.wav'),propeller:new Audio(propFiles[propIndex])};
  localAudio.rain.loop=true;localAudio.wind.loop=true;localAudio.idlePropeller.loop=true;localAudio.propeller.loop=true;
  localAudio.rain.volume=.13;localAudio.wind.volume=.05;localAudio.idlePropeller.volume=.16;localAudio.propeller.volume=propProfiles[saveState.selectedAircraft%10][1];
  localAudio.idlePropeller.playbackRate=Math.max(.65,propProfiles[saveState.selectedAircraft%10][0]*.72);
