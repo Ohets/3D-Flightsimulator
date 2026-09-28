@@ -382,21 +382,30 @@ function updateLocalAudio(){
  localAudio.rain.volume=.13;
  localAudio.propeller.volume=Math.min(.55,profile[1]+throttle*.12);
  localAudio.propeller.playbackRate=Math.min(1.85,profile[0]+throttle*.42+Math.min(speed/140,1)*.08);
- if(inputs.throttleUp && !localAudio.propeller.paused){
-   // Schub wird über die Wiedergabegeschwindigkeit hörbar stärker.
- } 
- if(inputs.throttleUp && localAudio.propeller.paused){
-   localAudio.propeller.play().catch(()=>{});
- }
- if(!inputs.throttleUp && !localAudio.propeller.paused){
-   localAudio.propeller.pause();
-   localAudio.propeller.currentTime=0;
+}let gameRunning=false;function animate(){if(!gameRunning)return;requestAnimationFrame(animate);const delta=clock.getDelta();updateFlightPhysics(delta);updateRain(delta);updateLocalAudio();renderer.render(scene,camera);}
+addEventListener('keydown',e=>{if(!gameRunning)return;switch(e.key.toLowerCase()){case'w':case'arrowup':inputs.pitchUp=true;break;case's':case'arrowdown':inputs.pitchDown=true;break;case'a':case'arrowleft':inputs.rollLeft=true;break;case'd':case'arrowright':inputs.rollRight=true;break;case'r':inputs.throttleUp=true;setThrottleSound(true);break;case'f':inputs.throttleDown=true;break;case'escape':gameRunning=false;stopLocalAudio();menuOverlay.style.display='flex';updateUI();break;}});
+addEventListener('keyup',e=>{switch(e.key.toLowerCase()){case'w':case'arrowup':inputs.pitchUp=false;break;case's':case'arrowdown':inputs.pitchDown=false;break;case'a':case'arrowleft':inputs.rollLeft=false;break;case'd':case'arrowright':inputs.rollRight=false;break;case'r':inputs.throttleUp=false;setThrottleSound(false);break;case'f':inputs.throttleDown=false;break;}});
+function setThrottleSound(on){
+ if(!localAudio||!localAudio.propeller)return;
+ if(on){
+  localAudio.propeller.currentTime=0;
+  localAudio.propeller.play().catch(()=>{});
+ }else{
+  localAudio.propeller.pause();
+  localAudio.propeller.currentTime=0;
  }
 }
-let gameRunning=false;function animate(){if(!gameRunning)return;requestAnimationFrame(animate);const delta=clock.getDelta();updateFlightPhysics(delta);updateRain(delta);updateLocalAudio();renderer.render(scene,camera);}
-addEventListener('keydown',e=>{if(!gameRunning)return;switch(e.key.toLowerCase()){case'w':case'arrowup':inputs.pitchUp=true;break;case's':case'arrowdown':inputs.pitchDown=true;break;case'a':case'arrowleft':inputs.rollLeft=true;break;case'd':case'arrowright':inputs.rollRight=true;break;case'r':inputs.throttleUp=true;break;case'f':inputs.throttleDown=true;break;case'escape':gameRunning=false;stopLocalAudio();menuOverlay.style.display='flex';updateUI();break;}});
-addEventListener('keyup',e=>{switch(e.key.toLowerCase()){case'w':case'arrowup':inputs.pitchUp=false;break;case's':case'arrowdown':inputs.pitchDown=false;break;case'a':case'arrowleft':inputs.rollLeft=false;break;case'd':case'arrowright':inputs.rollRight=false;break;case'r':inputs.throttleUp=false;break;case'f':inputs.throttleDown=false;break;}});
-function bindTouchBtn(id,p){const b=document.getElementById(id);if(!b)return;const s=e=>{e.preventDefault();inputs[p]=true},x=e=>{e.preventDefault();inputs[p]=false};b.addEventListener('touchstart',s,{passive:false});b.addEventListener('touchend',x,{passive:false});b.addEventListener('touchcancel',x,{passive:false});b.addEventListener('mousedown',()=>inputs[p]=true);b.addEventListener('mouseup',()=>inputs[p]=false);b.addEventListener('mouseleave',()=>inputs[p]=false);}
+function bindTouchBtn(id,p){
+ const btn=document.getElementById(id);if(!btn)return;
+ const start=e=>{e.preventDefault();inputs[p]=true;if(p==='throttleUp')setThrottleSound(true);};
+ const end=e=>{e.preventDefault();inputs[p]=false;if(p==='throttleUp')setThrottleSound(false);};
+ btn.addEventListener('touchstart',start,{passive:false});
+ btn.addEventListener('touchend',end,{passive:false});
+ btn.addEventListener('touchcancel',end,{passive:false});
+ btn.addEventListener('mousedown',()=>{inputs[p]=true;if(p==='throttleUp')setThrottleSound(true);});
+ btn.addEventListener('mouseup',()=>{inputs[p]=false;if(p==='throttleUp')setThrottleSound(false);});
+ btn.addEventListener('mouseleave',()=>{inputs[p]=false;if(p==='throttleUp')setThrottleSound(false);});
+}
 bindTouchBtn('btn-throttle-up','throttleUp');bindTouchBtn('btn-throttle-down','throttleDown');bindTouchBtn('btn-roll-left','rollLeft');bindTouchBtn('btn-roll-right','rollRight');bindTouchBtn('btn-pitch-up','pitchUp');bindTouchBtn('btn-pitch-down','pitchDown');
 document.getElementById('start-btn').addEventListener('click',()=>{saveState.currentMission=parseInt(missionSelectEl.value);saveGame();menuOverlay.style.display='none';gameRunning=true;init3D();clock.getDelta();startLocalAudio();animate();});updateUI();
 </script>
