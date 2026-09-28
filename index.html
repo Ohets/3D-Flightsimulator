@@ -260,7 +260,49 @@ function updateRain(delta){
  for(let i=0;i<a.length;i+=3){a[i+1]-=delta*320;if(a[i+1]<2){a[i+1]=650+Math.random()*80;a[i]=airplane.position.x+(Math.random()-.5)*1800;a[i+2]=airplane.position.z+(Math.random()-.5)*1800;}}
  window.rainGroup.children[0].geometry.attributes.position.needsUpdate=true;
 }
-let audioCtx=null,engineOsc=null,engineGain=null,windOsc=null,windGain=null;\nfunction initAudio(){\n if(audioCtx){if(audioCtx.state==='suspended')audioCtx.resume();return;}\n audioCtx=new (window.AudioContext||window.webkitAudioContext)();\n engineOsc=audioCtx.createOscillator();engineGain=audioCtx.createGain();engineOsc.type='sawtooth';engineOsc.frequency.value=70;engineGain.gain.value=0;engineOsc.connect(engineGain).connect(audioCtx.destination);engineOsc.start();\n windOsc=audioCtx.createOscillator();windGain=audioCtx.createGain();windOsc.type='filteredNoise' in audioCtx? 'sine':'sine';windOsc.frequency.value=180;windGain.gain.value=0;windOsc.connect(windGain).connect(audioCtx.destination);windOsc.start();\n}\nfunction updateAudio(){\n if(!audioCtx||!engineOsc)return;\n const t=performance.now()/1000;\n const rpm=70+(physics.throttle/100)*150+(physics.speed/acAircraftSpeed())*80;\n engineOsc.frequency.setTargetAtTime(rpm+Math.sin(t*18)*4,audioCtx.currentTime,.04);\n engineGain.gain.setTargetAtTime(.025+.075*(physics.throttle/100),audioCtx.currentTime,.08);\n windOsc.frequency.setTargetAtTime(120+physics.speed*8,audioCtx.currentTime,.08);\n windGain.gain.setTargetAtTime(Math.min(.055,physics.speed/1800),audioCtx.currentTime,.12);\n}\nfunction acAircraftSpeed(){return aircraftData[saveState.selectedAircraft].speedMax;}\nfunction stopAudio(){if(!audioCtx)return;engineGain.gain.setTargetAtTime(0,audioCtx.currentTime,.05);windGain.gain.setTargetAtTime(0,audioCtx.currentTime,.05);}\nfunction buildMissionRing(){if(ringTarget)scene.remove(ringTarget);const m=missionData[saveState.currentMission];ringTarget=new THREE.Mesh(new THREE.TorusGeometry(12,1.5,8,24),new THREE.MeshBasicMaterial({color:0xffff00}));ringTarget.position.set(m.targetPos.x,m.targetPos.y,m.targetPos.z);scene.add(ringTarget);document.getElementById('hud-mission-desc').innerText='Ziel: '+m.name+' - '+m.desc;}
+let audioCtx=null,engineOsc=null,engineGain=null,windOsc=null,windGain=null;\nfunction initAudio(){
+ try{
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC)return;
+  if(audioCtx){if(audioCtx.state==='suspended')audioCtx.resume();return;}
+  audioCtx=new AC();
+  engineOsc=audioCtx.createOscillator();
+  engineGain=audioCtx.createGain();
+  engineOsc.type='sawtooth';
+  engineOsc.frequency.value=70;
+  engineGain.gain.value=0;
+  engineOsc.connect(engineGain).connect(audioCtx.destination);
+  engineOsc.start();
+  windOsc=audioCtx.createOscillator();
+  windGain=audioCtx.createGain();
+  windOsc.type='sine';
+  windOsc.frequency.value=180;
+  windGain.gain.value=0;
+  windOsc.connect(windGain).connect(audioCtx.destination);
+  windOsc.start();
+ }catch(e){
+  audioCtx=null;engineOsc=null;engineGain=null;windOsc=null;windGain=null;
+  console.warn('Audio nicht verfügbar:',e);
+ }
+}
+function updateAudio(){
+ if(!audioCtx||!engineOsc)return;
+ const t=performance.now()/1000;
+ const rpm=70+(physics.throttle/100)*150+(physics.speed/acAircraftSpeed())*80;
+ engineOsc.frequency.setTargetAtTime(rpm+Math.sin(t*18)*4,audioCtx.currentTime,.04);
+ engineGain.gain.setTargetAtTime(.025+.075*(physics.throttle/100),audioCtx.currentTime,.08);
+ windOsc.frequency.setTargetAtTime(120+physics.speed*8,audioCtx.currentTime,.08);
+ windGain.gain.setTargetAtTime(Math.min(.055,physics.speed/1800),audioCtx.currentTime,.12);
+}
+function acAircraftSpeed(){return aircraftData[saveState.selectedAircraft].speedMax;}
+function stopAudio(){
+ if(!audioCtx)return;
+ try{
+  engineGain.gain.setTargetAtTime(0,audioCtx.currentTime,.05);
+  windGain.gain.setTargetAtTime(0,audioCtx.currentTime,.05);
+ }catch(e){}
+}
+function buildMissionRing(){if(ringTarget)scene.remove(ringTarget);const m=missionData[saveState.currentMission];ringTarget=new THREE.Mesh(new THREE.TorusGeometry(12,1.5,8,24),new THREE.MeshBasicMaterial({color:0xffff00}));ringTarget.position.set(m.targetPos.x,m.targetPos.y,m.targetPos.z);scene.add(ringTarget);document.getElementById('hud-mission-desc').innerText='Ziel: '+m.name+' - '+m.desc;}
 function onWindowResize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}
 function updateFlightPhysics(delta){
 if(!airplane)return;
