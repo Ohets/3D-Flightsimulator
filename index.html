@@ -211,17 +211,99 @@ const propGeo=new THREE.BoxGeometry(2.8,.2,.05),propMat=new THREE.MeshStandardMa
 function buildMissionRing(){if(ringTarget)scene.remove(ringTarget);const m=missionData[saveState.currentMission];ringTarget=new THREE.Mesh(new THREE.TorusGeometry(12,1.5,8,24),new THREE.MeshBasicMaterial({color:0xffff00}));ringTarget.position.set(m.targetPos.x,m.targetPos.y,m.targetPos.z);scene.add(ringTarget);document.getElementById('hud-mission-desc').innerText='Ziel: '+m.name+' - '+m.desc;}
 function onWindowResize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}
 function updateFlightPhysics(delta){
-if(!airplane)return;const ac=aircraftData[saveState.selectedAircraft];if(inputs.throttleUp)physics.throttle=Math.min(100,physics.throttle+delta*35);if(inputs.throttleDown)physics.throttle=Math.max(0,physics.throttle-delta*35);document.getElementById('hud-throttle').innerText=Math.round(physics.throttle);
-if(propellerLeft&&propellerRight){const rs=physics.throttle/100*1.5+.1;propellerLeft.rotation.z+=rs;propellerRight.rotation.z-=rs;}
-let targetSpeed=physics.throttle/100*ac.speedMax;const forwardVector=new THREE.Vector3(0,0,-1).applyQuaternion(airplane.quaternion),pitchInclination=forwardVector.y;targetSpeed-=pitchInclination*15;if(targetSpeed<0)targetSpeed=0;physics.speed+=(targetSpeed-physics.speed)*delta*1.2;
-const lift=physics.speed*physics.speed*ac.liftFactor*.05,gravity=9.81*.15,handlingFactor=ac.handling;
-if(inputs.pitchUp)physics.pitchSpeed=Math.min(1.2,physics.pitchSpeed+delta*4*handlingFactor);else if(inputs.pitchDown)physics.pitchSpeed=Math.max(-1.2,physics.pitchSpeed-delta*4*handlingFactor);else physics.pitchSpeed*=.9;
-if(inputs.rollLeft)physics.rollSpeed=Math.min(1.5,physics.rollSpeed+delta*5*handlingFactor);else if(inputs.rollRight)physics.rollSpeed=Math.max(-1.5,physics.rollSpeed-delta*5*handlingFactor);else physics.rollSpeed*=.9;
-airplane.rotateX(physics.pitchSpeed*delta);airplane.rotateZ(physics.rollSpeed*delta);const euler=new THREE.Euler().setFromQuaternion(airplane.quaternion,'YXZ'),rollAngle=euler.z;airplane.rotateY(-rollAngle*delta*.4);
-let localVelocity=new THREE.Vector3(0,0,-physics.speed).applyQuaternion(airplane.quaternion),verticalNetChange=lift-gravity;if(airplane.position.y<=1.2&&verticalNetChange<0){verticalNetChange=0;if(physics.speed<5){airplane.rotation.z*=.8;airplane.rotation.x*=.8;}}
-airplane.position.x+=localVelocity.x*delta*10;airplane.position.y+=(localVelocity.y+verticalNetChange)*delta*10;airplane.position.z+=localVelocity.z*delta*10;if(airplane.position.y<1.2){airplane.position.y=1.2;if(physics.throttle===0)physics.speed*=.95;}
-document.getElementById('hud-speed').innerText=Math.round(physics.speed*8);document.getElementById('hud-altitude').innerText=Math.round(airplane.position.y*5);if(ringTarget)ringTarget.rotation.y+=delta*.5;
-const offset=new THREE.Vector3(0,4.2,16).applyQuaternion(airplane.quaternion),targetCamPos=airplane.position.clone().add(offset);camera.position.lerp(targetCamPos,.085);camera.lookAt(airplane.position.clone().add(new THREE.Vector3(0,.5,-2).applyQuaternion(airplane.quaternion)));checkMissionCollision();}
+if(!airplane)return;
+const ac=aircraftData[saveState.selectedAircraft];
+const dt=Math.min(delta,.035);
+const handlingFactor=ac.handling;
+
+// Schub: weichere Beschleunigung und natürliche Trägheit
+if(inputs.throttleUp)physics.throttle=Math.min(100,physics.throttle+dt*32);
+if(inputs.throttleDown)physics.throttle=Math.max(0,physics.throttle-dt*32);
+document.getElementById('hud-throttle').innerText=Math.round(physics.throttle);
+
+if(propellerLeft&&propellerRight){
+ const rs=(physics.throttle/100)*2.2+.08;
+ propellerLeft.rotation.z+=rs;
+ propellerRight.rotation.z-=rs;
+}
+
+// Zielgeschwindigkeit mit Luftwiderstand statt sofortiger Geschwindigkeitsänderung
+const forwardVector=new THREE.Vector3(0,0,-1).applyQuaternion(airplane.quaternion);
+const climbPenalty=Math.max(-1,Math.min(1,forwardVector.y))*10;
+const throttleSpeed=(physics.throttle/100)*ac.speedMax;
+const drag=physics.speed*physics.speed*.008;
+let targetSpeed=Math.max(0,throttleSpeed-climbPenalty-drag);
+const acceleration=(targetSpeed-physics.speed)*(1.0+handlingFactor*.12);
+physics.speed+=acceleration*dt;
+physics.speed=Math.max(0,Math.min(ac.speedMax*1.08,physics.speed));
+
+// Steuerung mit Trägheit
+const pitchInput=(inputs.pitchUp?1:0)-(inputs.pitchDown?1:0);
+const rollInput=(inputs.rollLeft?1:0)-(inputs.rollRight?1:0);
+const pitchAuthority=Math.min(1,physics.speed/18);
+const stallFactor=physics.speed<12?Math.max(.25,physics.speed/12):1;
+
+if(pitchInput!==0){
+ physics.pitchSpeed+=pitchInput*dt*2.8*handlingFactor*pitchAuthority;
+}else{
+ physics.pitchSpeed*=Math.pow(.16,dt);
+}
+physics.pitchSpeed=Math.max(-.75,Math.min(.75,physics.pitchSpeed));
+physics.pitchSpeed*=stallFactor;
+
+if(rollInput!==0){
+ physics.rollSpeed+=rollInput*dt*3.8*handlingFactor*pitchAuthority;
+}else{
+ physics.rollSpeed*=Math.pow(.08,dt);
+}
+physics.rollSpeed=Math.max(-1.15,Math.min(1.15,physics.rollSpeed));
+physics.rollSpeed*=stallFactor;
+
+airplane.rotateX(physics.pitchSpeed*dt);
+airplane.rotateZ(physics.rollSpeed*dt);
+
+// Banked turn: stärkeres Rollen erzeugt eine sanfte Gierbewegung
+const euler=new THREE.Euler().setFromQuaternion(airplane.quaternion,'YXZ');
+const rollAngle=euler.z;
+const bankTurn=Math.sin(Math.max(-1.2,Math.min(1.2,rollAngle)))*.65*handlingFactor;
+airplane.rotateY(-bankTurn*dt);
+
+// Auftrieb hängt von Geschwindigkeit und Anstellwinkel ab.
+// Bei zu geringer Geschwindigkeit entsteht ein leichter Stall-Effekt.
+const speedRatio=Math.min(1.4,physics.speed/28);
+const pitchLift=Math.max(-.7,Math.min(1.1,forwardVector.y*.8));
+const lift=(speedRatio*speedRatio)*ac.liftFactor*2.2*(1-Math.min(.7,Math.abs(rollAngle)*.28));
+const gravity=.34;
+let verticalAcceleration=lift-gravity+pitchLift*.16;
+
+// Bodenwirkung: sanftes Abfangen und Rollen statt Durchdringen des Bodens
+if(airplane.position.y<=1.2){
+ airplane.position.y=1.2;
+ if(verticalAcceleration<0)verticalAcceleration=0;
+ if(physics.speed<12){
+  physics.speed=Math.max(0,physics.speed-dt*(physics.throttle<5?8:2));
+  airplane.rotation.x*=Math.pow(.12,dt);
+  airplane.rotation.z*=Math.pow(.12,dt);
+ }
+}
+
+// Geschwindigkeit in Flugrichtung + vertikale Physik
+const localVelocity=new THREE.Vector3(0,0,-physics.speed).applyQuaternion(airplane.quaternion);
+airplane.position.x+=localVelocity.x*dt*7.5;
+airplane.position.z+=localVelocity.z*dt*7.5;
+airplane.position.y+=(localVelocity.y+verticalAcceleration)*dt*7.5;
+
+if(airplane.position.y<1.2)airplane.position.y=1.2;
+
+document.getElementById('hud-speed').innerText=Math.round(physics.speed*8);
+document.getElementById('hud-altitude').innerText=Math.max(0,Math.round((airplane.position.y-1.2)*5));
+if(ringTarget)ringTarget.rotation.y+=dt*.5;
+
+const offset=new THREE.Vector3(0,4.2,16).applyQuaternion(airplane.quaternion);
+const targetCamPos=airplane.position.clone().add(offset);
+camera.position.lerp(targetCamPos,.085);
+camera.lookAt(airplane.position.clone().add(new THREE.Vector3(0,.5,-2).applyQuaternion(airplane.quaternion)));
+checkMissionCollision();}
 function checkMissionCollision(){if(!airplane||!ringTarget)return;const dist=airplane.position.distanceTo(ringTarget.position);if(dist<15){const m=missionData[saveState.currentMission];saveState.credits+=m.reward;const msg=document.getElementById('hud-center-msg');msg.innerHTML='MISSION ERFÜLLT!<br>+'+m.reward+' Credits';msg.style.display='block';saveState.currentMission=(saveState.currentMission+1)%20;saveGame();updateUI();scene.remove(ringTarget);ringTarget=null;setTimeout(()=>{msg.style.display='none';buildMissionRing();},3000);}}
 let gameRunning=false;function animate(){if(!gameRunning)return;requestAnimationFrame(animate);const delta=clock.getDelta();updateFlightPhysics(delta);renderer.render(scene,camera);}
 addEventListener('keydown',e=>{if(!gameRunning)return;switch(e.key.toLowerCase()){case'w':case'arrowup':inputs.pitchUp=true;break;case's':case'arrowdown':inputs.pitchDown=true;break;case'a':case'arrowleft':inputs.rollLeft=true;break;case'd':case'arrowright':inputs.rollRight=true;break;case'r':inputs.throttleUp=true;break;case'f':inputs.throttleDown=true;break;case'escape':gameRunning=false;menuOverlay.style.display='flex';updateUI();break;}});
