@@ -239,7 +239,7 @@ physics.speed=Math.max(0,Math.min(ac.speedMax*1.08,physics.speed));
 
 // Steuerung mit Trägheit
 const pitchInput=(inputs.pitchUp?1:0)-(inputs.pitchDown?1:0);
-const rollInput=(inputs.rollLeft?1:0)-(inputs.rollRight?1:0);
+const rollInput=(inputs.rollRight?1:0)-(inputs.rollLeft?1:0);
 const pitchAuthority=Math.min(1,physics.speed/18);
 const stallFactor=physics.speed<12?Math.max(.25,physics.speed/12):1;
 
