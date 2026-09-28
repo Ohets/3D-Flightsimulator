@@ -371,7 +371,7 @@ function initLocalAudio(){
  localAudio.rain.volume=.13;localAudio.wind.volume=.05;localAudio.propeller.volume=propProfiles[saveState.selectedAircraft%10][1];
  localAudio.propeller.playbackRate=propProfiles[saveState.selectedAircraft%10][0];
 }
-function startLocalAudio(){initLocalAudio();[localAudio.engine,localAudio.rain,localAudio.wind].forEach(a=>a.play().catch(()=>{}));}
+function startLocalAudio(){initLocalAudio();[localAudio.rain,localAudio.wind].forEach(a=>a.play().catch(()=>{}));}
 function stopLocalAudio(){if(!localAudio)return;[localAudio.rain,localAudio.wind,localAudio.propeller].forEach(a=>{a.pause();a.currentTime=0;});}
 function updateLocalAudio(){
  if(!localAudio||!airplane)return;
