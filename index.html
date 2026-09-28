@@ -266,7 +266,7 @@ airplane.rotateZ(physics.rollSpeed*dt);
 const euler=new THREE.Euler().setFromQuaternion(airplane.quaternion,'YXZ');
 const rollAngle=euler.z;
 const bankTurn=Math.sin(Math.max(-1.2,Math.min(1.2,rollAngle)))*.65*handlingFactor;
-airplane.rotateY(-bankTurn*dt);
+airplane.rotateY(bankTurn*dt);
 
 // Auftrieb hängt von Geschwindigkeit und Anstellwinkel ab.
 // Bei zu geringer Geschwindigkeit entsteht ein leichter Stall-Effekt.
