@@ -74,7 +74,10 @@ missionSelectEl.innerHTML='';missionSelectEl.previousElementSibling.innerText='M
 window.selectAircraft=function(idx){saveState.selectedAircraft=idx;saveGame();updateUI();};
 window.buyAircraft=function(idx){const p=aircraftData[idx].price;if(saveState.credits>=p){saveState.credits-=p;saveState.unlockedAircraft.push(idx);saveState.selectedAircraft=idx;saveGame();updateUI();}else alert("Nicht genug Credits! Fliege erst Missionen, um Credits zu verdienen.");};
 function init3D(){
-const c=document.getElementById('canvas-container');c.innerHTML='';scene=new THREE.Scene();scene.background=new THREE.Color(0x87ceeb);scene.fog=new THREE.FogExp2(0x87ceeb,.00055);camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,9000);renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;c.appendChild(renderer.domElement);
+const c=document.getElementById('canvas-container');
+if(renderer){renderer.dispose();renderer.forceContextLoss();}
+if(scene)scene.clear();
+c.innerHTML='';scene=new THREE.Scene();scene.background=new THREE.Color(0x87ceeb);scene.fog=new THREE.FogExp2(0x87ceeb,.00055);camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,9000);renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;c.appendChild(renderer.domElement);
 scene.add(new THREE.AmbientLight(0xffffff,.6));const sun=new THREE.DirectionalLight(0xfffaed,.8);sun.position.set(500,1000,500);scene.add(sun);
 const region=saveState.currentMission>=20?1:0;
 const groundColor=region===0?0x557a46:0x8b7650;
@@ -85,6 +88,18 @@ const lineGeo=new THREE.PlaneGeometry(2,40),lineMat=new THREE.MeshBasicMaterial(
 buildAirplaneModel();buildMissionRing();physics.speed=0;physics.throttle=0;airplane.position.set(0,2,0);airplane.rotation.set(0,Math.PI,0);addEventListener('resize',onWindowResize,false);}
 
 function buildScenery(region=0){
+if(region===1){
+ const waterMat2=new THREE.MeshStandardMaterial({color:0x1b7892,roughness:.2,metalness:.05,transparent:true,opacity:.95});
+ const sandMat=new THREE.MeshStandardMaterial({color:0xc2a66b,roughness:1});
+ const rockMat=new THREE.MeshStandardMaterial({color:0x6b6255,roughness:1,flatShading:true});
+ const forestMat=new THREE.MeshStandardMaterial({color:0x1f4f38,roughness:1});
+ const cliffData=[[-900,-900,420,180],[950,-1500,520,220],[-1100,-2600,650,260],[1300,-3500,700,300]];
+ cliffData.forEach(d=>{const m=new THREE.Mesh(new THREE.ConeGeometry(d[2],d[3],7),rockMat);m.position.set(d[0],d[3]/2,d[1]);scene.add(m);});
+ const coast=new THREE.Mesh(new THREE.PlaneGeometry(5200,1800),waterMat2);coast.rotation.x=-Math.PI/2;coast.position.set(1900,.025,-3300);scene.add(coast);
+ for(let i=0;i<12;i++){const x=-1800+(i*317)%3600,z=-700-(i*283)%3800;const t=new THREE.Mesh(new THREE.ConeGeometry(18+(i%4)*5,55+(i%3)*12,7),forestMat);t.position.set(x,30,z);scene.add(t);}
+ for(let i=0;i<8;i++){const island=new THREE.Mesh(new THREE.CylinderGeometry(55+i*9,95+i*12,10,8),sandMat);island.position.set(700+(i%4)*300,5,-2100-i*280);scene.add(island);}
+ return;
+}
 const waterMat=new THREE.MeshStandardMaterial({color:region===0?0x2b8fba:0x1d8fb0,roughness:.18,metalness:.05,transparent:true,opacity:.92});
 const lakeData=region===0?[
 {x:-650,z:-850,w:520,d:850,r:.18},{x:850,z:-1450,w:700,d:1100,r:-.22},
