@@ -86,7 +86,7 @@ buildAirportExpansion(region);
 buildRain();
 const runway=new THREE.Mesh(new THREE.PlaneGeometry(60,800),new THREE.MeshStandardMaterial({color:0x333333,roughness:.8}));runway.rotation.x=-Math.PI/2;runway.position.set(region===1?-850:0,.1,region===1?-1100:-250);scene.add(runway);
 const lineGeo=new THREE.PlaneGeometry(2,40),lineMat=new THREE.MeshBasicMaterial({color:0xffffff});for(let z=-600;z<=100;z+=100){const l=new THREE.Mesh(lineGeo,lineMat);l.rotation.x=-Math.PI/2;l.position.set(region===1?-850:0,.2,region===1?z-850:z);scene.add(l);}
-buildAirplaneModel();buildMissionRing();physics.speed=0;physics.throttle=0;const startX=region===1?-850:0;const startZ=region===1?-1100:-250;airplane.position.set(startX,2,startZ);airplane.rotation.set(0,Math.PI,0);addEventListener('resize',onWindowResize,false);}
+buildAirplaneModel();buildMissionRing();physics.speed=0;physics.throttle=0;airplane.position.set(0,2,0);airplane.rotation.set(0,Math.PI,0);addEventListener('resize',onWindowResize,false);}
 
 function buildScenery(region=0){
 if(region===1){
@@ -260,48 +260,6 @@ function updateRain(delta){
  for(let i=0;i<a.length;i+=3){a[i+1]-=delta*320;if(a[i+1]<2){a[i+1]=650+Math.random()*80;a[i]=airplane.position.x+(Math.random()-.5)*1800;a[i+2]=airplane.position.z+(Math.random()-.5)*1800;}}
  window.rainGroup.children[0].geometry.attributes.position.needsUpdate=true;
 }
-let audioCtx=null,engineOsc=null,engineGain=null,windOsc=null,windGain=null;\nfunction initAudio(){
- try{
-  const AC=window.AudioContext||window.webkitAudioContext;
-  if(!AC)return;
-  if(audioCtx){if(audioCtx.state==='suspended')audioCtx.resume();return;}
-  audioCtx=new AC();
-  engineOsc=audioCtx.createOscillator();
-  engineGain=audioCtx.createGain();
-  engineOsc.type='sawtooth';
-  engineOsc.frequency.value=70;
-  engineGain.gain.value=0;
-  engineOsc.connect(engineGain).connect(audioCtx.destination);
-  engineOsc.start();
-  windOsc=audioCtx.createOscillator();
-  windGain=audioCtx.createGain();
-  windOsc.type='sine';
-  windOsc.frequency.value=180;
-  windGain.gain.value=0;
-  windOsc.connect(windGain).connect(audioCtx.destination);
-  windOsc.start();
- }catch(e){
-  audioCtx=null;engineOsc=null;engineGain=null;windOsc=null;windGain=null;
-  console.warn('Audio nicht verfügbar:',e);
- }
-}
-function updateAudio(){
- if(!audioCtx||!engineOsc)return;
- const t=performance.now()/1000;
- const rpm=70+(physics.throttle/100)*150+(physics.speed/acAircraftSpeed())*80;
- engineOsc.frequency.setTargetAtTime(rpm+Math.sin(t*18)*4,audioCtx.currentTime,.04);
- engineGain.gain.setTargetAtTime(.025+.075*(physics.throttle/100),audioCtx.currentTime,.08);
- windOsc.frequency.setTargetAtTime(120+physics.speed*8,audioCtx.currentTime,.08);
- windGain.gain.setTargetAtTime(Math.min(.055,physics.speed/1800),audioCtx.currentTime,.12);
-}
-function acAircraftSpeed(){return aircraftData[saveState.selectedAircraft].speedMax;}
-function stopAudio(){
- if(!audioCtx)return;
- try{
-  engineGain.gain.setTargetAtTime(0,audioCtx.currentTime,.05);
-  windGain.gain.setTargetAtTime(0,audioCtx.currentTime,.05);
- }catch(e){}
-}
 function buildMissionRing(){if(ringTarget)scene.remove(ringTarget);const m=missionData[saveState.currentMission];ringTarget=new THREE.Mesh(new THREE.TorusGeometry(12,1.5,8,24),new THREE.MeshBasicMaterial({color:0xffff00}));ringTarget.position.set(m.targetPos.x,m.targetPos.y,m.targetPos.z);scene.add(ringTarget);document.getElementById('hud-mission-desc').innerText='Ziel: '+m.name+' - '+m.desc;}
 function onWindowResize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}
 function updateFlightPhysics(delta){
@@ -399,12 +357,12 @@ camera.position.lerp(targetCamPos,.085);
 camera.lookAt(airplane.position.clone().add(new THREE.Vector3(0,.5,-2).applyQuaternion(airplane.quaternion)));
 checkMissionCollision();}
 function checkMissionCollision(){if(!airplane||!ringTarget)return;const dist=airplane.position.distanceTo(ringTarget.position);if(dist<15){const m=missionData[saveState.currentMission];saveState.credits+=m.reward;const msg=document.getElementById('hud-center-msg');const nextMission=saveState.currentMission+1;saveState.currentMission=nextMission%40;saveGame();updateUI();scene.remove(ringTarget);ringTarget=null;if(nextMission===20){msg.innerHTML='REGION ABGESCHLOSSEN!<br>Neue Landschaft wird geladen…';msg.style.display='block';setTimeout(()=>{msg.style.display='none';init3D();buildMissionRing();},3000);}else{msg.innerHTML='MISSION ERFÜLLT!<br>+'+m.reward+' Credits';msg.style.display='block';setTimeout(()=>{msg.style.display='none';buildMissionRing();},3000);}}}
-let gameRunning=false;function animate(){if(!gameRunning)return;requestAnimationFrame(animate);const delta=clock.getDelta();updateFlightPhysics(delta);updateRain(delta);updateAudio();renderer.render(scene,camera);}
-addEventListener('keydown',e=>{if(!gameRunning)return;switch(e.key.toLowerCase()){case'w':case'arrowup':inputs.pitchUp=true;break;case's':case'arrowdown':inputs.pitchDown=true;break;case'a':case'arrowleft':inputs.rollLeft=true;break;case'd':case'arrowright':inputs.rollRight=true;break;case'r':inputs.throttleUp=true;break;case'f':inputs.throttleDown=true;break;case'escape':gameRunning=false;stopAudio();menuOverlay.style.display='flex';updateUI();break;}});
+let gameRunning=false;function animate(){if(!gameRunning)return;requestAnimationFrame(animate);const delta=clock.getDelta();updateFlightPhysics(delta);updateRain(delta);renderer.render(scene,camera);}
+addEventListener('keydown',e=>{if(!gameRunning)return;switch(e.key.toLowerCase()){case'w':case'arrowup':inputs.pitchUp=true;break;case's':case'arrowdown':inputs.pitchDown=true;break;case'a':case'arrowleft':inputs.rollLeft=true;break;case'd':case'arrowright':inputs.rollRight=true;break;case'r':inputs.throttleUp=true;break;case'f':inputs.throttleDown=true;break;case'escape':gameRunning=false;menuOverlay.style.display='flex';updateUI();break;}});
 addEventListener('keyup',e=>{switch(e.key.toLowerCase()){case'w':case'arrowup':inputs.pitchUp=false;break;case's':case'arrowdown':inputs.pitchDown=false;break;case'a':case'arrowleft':inputs.rollLeft=false;break;case'd':case'arrowright':inputs.rollRight=false;break;case'r':inputs.throttleUp=false;break;case'f':inputs.throttleDown=false;break;}});
 function bindTouchBtn(id,p){const b=document.getElementById(id);if(!b)return;const s=e=>{e.preventDefault();inputs[p]=true},x=e=>{e.preventDefault();inputs[p]=false};b.addEventListener('touchstart',s,{passive:false});b.addEventListener('touchend',x,{passive:false});b.addEventListener('touchcancel',x,{passive:false});b.addEventListener('mousedown',()=>inputs[p]=true);b.addEventListener('mouseup',()=>inputs[p]=false);b.addEventListener('mouseleave',()=>inputs[p]=false);}
 bindTouchBtn('btn-throttle-up','throttleUp');bindTouchBtn('btn-throttle-down','throttleDown');bindTouchBtn('btn-roll-left','rollLeft');bindTouchBtn('btn-roll-right','rollRight');bindTouchBtn('btn-pitch-up','pitchUp');bindTouchBtn('btn-pitch-down','pitchDown');
-document.getElementById('start-btn').addEventListener('click',()=>{saveState.currentMission=parseInt(missionSelectEl.value);saveGame();menuOverlay.style.display='none';gameRunning=true;init3D();initAudio();clock.getDelta();animate();});updateUI();
+document.getElementById('start-btn').addEventListener('click',()=>{saveState.currentMission=parseInt(missionSelectEl.value);saveGame();menuOverlay.style.display='none';gameRunning=true;init3D();clock.getDelta();animate();});updateUI();
 </script>
 </body>
 </html>
