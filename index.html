@@ -161,31 +161,33 @@ function disposeSceneResources(oldScene){
 function init3D(){
 const c=document.getElementById('canvas-container');
 if(scene)disposeSceneResources(scene);
-scene=new THREE.Scene();scene.background=new THREE.Color(0x87ceeb);scene.fog=new THREE.FogExp2(0x87ceeb,.00055);camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,14000);
+scene=new THREE.Scene();scene.background=new THREE.Color(0x87ceeb);scene.fog=new THREE.FogExp2(0x87ceeb,.00055);
+camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,14000);
 if(!renderer){
  renderer=new THREE.WebGLRenderer({antialias:true,depth:true,stencil:false,powerPreference:'high-performance'});
- renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
- renderer.setSize(innerWidth,innerHeight);
- renderer.shadowMap.enabled=false;
- c.innerHTML='';
- c.appendChild(renderer.domElement);
-}else{
- renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
- renderer.setSize(innerWidth,innerHeight);
-}
-scene.add(new THREE.AmbientLight(0xffffff,.6));const sun=new THREE.DirectionalLight(0xfffaed,.8);sun.position.set(500,1000,500);scene.add(sun);
+ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.25));renderer.setSize(innerWidth,innerHeight);
+ renderer.shadowMap.enabled=false;c.innerHTML='';c.appendChild(renderer.domElement);
+}else{renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.25));renderer.setSize(innerWidth,innerHeight);}
+scene.add(new THREE.AmbientLight(0xffffff,.6));
+const sun=new THREE.DirectionalLight(0xfffaed,.8);sun.position.set(500,1000,500);scene.add(sun);
 const region=saveState.currentMission>=20?1:0;
-const groundColor=region===0?0x557a46:0x8b7650;
-const groundSize=region===1?16000:10000;
-const ground=new THREE.Mesh(new THREE.PlaneGeometry(groundSize,groundSize,48,48),new THREE.MeshStandardMaterial({color:groundColor,roughness:.9,metalness:.1,flatShading:true}));ground.rotation.x=-Math.PI/2;scene.add(ground);buildScenery(region);
-buildAirportExpansion(region);buildSceneryEnhancements(region);
-buildRain();
-const runway=new THREE.Mesh(new THREE.PlaneGeometry(60,800),new THREE.MeshStandardMaterial({color:0x333333,roughness:.8,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1}));runway.rotation.x=-Math.PI/2;runway.position.set(region===1?-850:0,.1,region===1?-1100:-250);scene.add(runway);
-const lineGeo=new THREE.PlaneGeometry(2,40),lineMat=new THREE.MeshBasicMaterial({color:0xffffff,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});for(let z=-600;z<=100;z+=100){const l=new THREE.Mesh(lineGeo,lineMat);l.rotation.x=-Math.PI/2;l.position.set(region===1?-850:0,.2,region===1?z-850:z);scene.add(l);}
+const groundColor=region===0?0x557a46:0x8b7650,groundSize=region===1?16000:10000;
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(groundSize,groundSize,24,24),new THREE.MeshStandardMaterial({color:groundColor,roughness:.9,metalness:.1,flatShading:true}));
+ground.rotation.x=-Math.PI/2;scene.add(ground);
+const runway=new THREE.Mesh(new THREE.PlaneGeometry(60,800),new THREE.MeshStandardMaterial({color:0x333333,roughness:.8,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1}));
+runway.rotation.x=-Math.PI/2;runway.position.set(region===1?-850:0,.1,region===1?-1100:-250);scene.add(runway);
+const lineGeo=new THREE.PlaneGeometry(2,40),lineMat=new THREE.MeshBasicMaterial({color:0xffffff,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+for(let z=-600;z<=100;z+=100){const l=new THREE.Mesh(lineGeo,lineMat);l.rotation.x=-Math.PI/2;l.position.set(region===1?-850:0,.2,region===1?z-850:z);scene.add(l);}
 buildAirplaneModel();buildMissionRing();physics.speed=0;physics.throttle=0;
 const spawnX=region===1?-850:0,spawnZ=region===1?-1450:-600;
-airplane.position.set(spawnX,2,spawnZ);airplane.rotation.set(0,Math.PI,0);camera.position.set(spawnX,6,spawnZ+18);addEventListener('resize',onWindowResize,false);}
-
+airplane.position.set(spawnX,2,spawnZ);airplane.rotation.set(0,Math.PI,0);camera.position.set(spawnX,6,spawnZ+18);
+addEventListener('resize',onWindowResize,false);
+renderer.render(scene,camera);
+setTimeout(()=>{if(gameRunning)buildScenery(region);},50);
+setTimeout(()=>{if(gameRunning)buildAirportExpansion(region);},150);
+setTimeout(()=>{if(gameRunning)buildSceneryEnhancements(region);},250);
+setTimeout(()=>{if(gameRunning)buildRain();},350);
+}
 function buildSceneryEnhancements(region){
  const cloudMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1,transparent:true,opacity:.82,depthWrite:false});
  for(let i=0;i<18;i++){
