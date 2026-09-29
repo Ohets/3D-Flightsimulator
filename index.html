@@ -709,7 +709,20 @@ function updateCrash(delta){
  if(!crashState.active)return;
  crashState.time+=delta;
  if(crashState.effect){crashState.effect.position.copy(airplane.position);crashState.effect.children.forEach((p,i)=>{p.position.y+=delta*(1.2+i*.06);p.scale.multiplyScalar(1+delta*.45);if(p.material.opacity>.05)p.material.opacity*=Math.pow(.55,delta);});crashState.effect.rotation.y+=delta*2;}
- if(crashState.time>=3){if(crashState.effect){scene.remove(crashState.effect);crashState.effect=null;}crashState.active=false;document.getElementById('crash-msg').style.display='none';airplane.visible=true;airplane.position.set(0,2,0);airplane.rotation.set(0,Math.PI,0);physics.speed=0;physics.throttle=0;physics.pitchSpeed=0;physics.rollSpeed=0;camera.position.set(0,6,18);startLocalAudio();}
+ if(crashState.time>=3){
+  if(crashState.effect){scene.remove(crashState.effect);crashState.effect=null;}
+  crashState.active=false;
+  document.getElementById('crash-msg').style.display='none';
+  physics.speed=0;physics.throttle=0;physics.pitchSpeed=0;physics.rollSpeed=0;physics.yawSpeed=0;
+  physics.velocity.set(0,0,0);
+  inputs={pitchUp:false,pitchDown:false,rollLeft:false,rollRight:false,throttleUp:false,throttleDown:false};
+  // Nach einem Crash die komplette aktuelle Region neu aufbauen.
+  // Mission 1-20 startet wieder am ursprünglichen Startpunkt der ersten Region,
+  // Mission 21-40 am Startpunkt der zweiten Region.
+  init3D();
+  buildMissionRing();
+  startLocalAudio();
+ }
 }
 
 function updateFlightPhysics(delta){
