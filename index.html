@@ -175,15 +175,14 @@ scene.add(new THREE.AmbientLight(0xffffff,.6));const sun=new THREE.DirectionalLi
 const region=saveState.currentMission>=20?1:0;
 const groundColor=region===0?0x557a46:0x8b7650;
 const groundSize=region===1?16000:10000;
-const groundMat=new THREE.MeshStandardMaterial({color:groundColor,roughness:.96,metalness:0,flatShading:false,polygonOffset:true,polygonOffsetFactor:2,polygonOffsetUnits:2});
-const ground=new THREE.Mesh(new THREE.PlaneGeometry(groundSize,groundSize,1,1),groundMat);ground.rotation.x=-Math.PI/2;ground.position.y=-0.08;ground.renderOrder=0;scene.add(ground);buildScenery(region);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(groundSize,groundSize,48,48),new THREE.MeshStandardMaterial({color:groundColor,roughness:.9,metalness:.1,flatShading:true}));ground.rotation.x=-Math.PI/2;scene.add(ground);buildScenery(region);
 buildAirportExpansion(region);buildSceneryEnhancements(region);
 buildRain();
 const runway=new THREE.Mesh(new THREE.PlaneGeometry(60,800),new THREE.MeshStandardMaterial({color:0x333333,roughness:.8,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1}));runway.rotation.x=-Math.PI/2;runway.position.set(region===1?-850:0,.1,region===1?-1100:-250);scene.add(runway);
 const lineGeo=new THREE.PlaneGeometry(2,40),lineMat=new THREE.MeshBasicMaterial({color:0xffffff,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});for(let z=-600;z<=100;z+=100){const l=new THREE.Mesh(lineGeo,lineMat);l.rotation.x=-Math.PI/2;l.position.set(region===1?-850:0,.2,region===1?z-850:z);scene.add(l);}
 buildAirplaneModel();buildMissionRing();physics.speed=0;physics.throttle=0;
 const spawnX=region===1?-850:0,spawnZ=region===1?-1450:-600;
-airplane.position.set(spawnX,2,spawnZ);airplane.rotation.set(0,Math.PI,0);camera.position.set(spawnX,6,spawnZ+18);camera.lookAt(new THREE.Vector3(spawnX,2,spawnZ+60));addEventListener('resize',onWindowResize,false);}
+airplane.position.set(spawnX,2,spawnZ);airplane.rotation.set(0,Math.PI,0);camera.position.set(spawnX,6,spawnZ+18);addEventListener('resize',onWindowResize,false);}
 
 function buildSceneryEnhancements(region){
  const cloudMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1,transparent:true,opacity:.82,depthWrite:false});
@@ -218,9 +217,9 @@ if(region===1){
  const forestMat=new THREE.MeshStandardMaterial({color:0x1f4f38,roughness:1});
  const cliffData=[[-1800,-1200,520,220],[1900,-2200,650,260],[-2200,-3800,780,320],[2400,-5200,850,360],[-1200,-6800,900,380],[3000,-7200,700,300]];
  cliffData.forEach(d=>{const m=new THREE.Mesh(new THREE.ConeGeometry(d[2],d[3],7),rockMat);m.position.set(d[0],d[3]/2,d[1]);scene.add(m);});
- const coast=new THREE.Mesh(new THREE.PlaneGeometry(3400,5000),waterMat2);coast.rotation.x=-Math.PI/2;coast.position.set(6100,.018,-5000);coast.renderOrder=1;scene.add(coast);
+ const coast=new THREE.Mesh(new THREE.PlaneGeometry(9000,3200),waterMat2);coast.rotation.x=-Math.PI/2;coast.position.set(2600,.025,-5200);scene.add(coast);
  for(let i=0;i<30;i++){const x=-3600+(i*317)%7200,z=-700-(i*283)%6500;const t=new THREE.Mesh(new THREE.ConeGeometry(18+(i%4)*5,55+(i%3)*12,7),forestMat);t.position.set(x,30,z);scene.add(t);}
- for(let i=0;i<8;i++){const island=new THREE.Mesh(new THREE.CylinderGeometry(55+i*9,95+i*12,10,8),sandMat);island.position.set(5000+(i%4)*420,5,-2800-Math.floor(i/4)*1100);scene.add(island);}
+ for(let i=0;i<8;i++){const island=new THREE.Mesh(new THREE.CylinderGeometry(55+i*9,95+i*12,10,8),sandMat);island.position.set(500+(i%8)*380,5,-1800-i*360);scene.add(island);}
 
  // Markante Orientierungspunkte für Mission 21-40
  const roadMat=new THREE.MeshStandardMaterial({color:0x3b3b3b,roughness:.95,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-3});
@@ -324,7 +323,7 @@ if(region===1){
  scene.add(bridge);
  return;
 }
-const waterMat=new THREE.MeshStandardMaterial({color:region===0?0x2b8fba:0x1d8fb0,roughness:.24,metalness:.02,transparent:true,opacity:.94,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-4});
+const waterMat=new THREE.MeshStandardMaterial({color:region===0?0x2b8fba:0x1d8fb0,roughness:.18,metalness:.05,transparent:true,opacity:.92});
 const lakeData=region===0?[
 {x:-650,z:-850,w:520,d:850,r:.18},{x:850,z:-1450,w:700,d:1100,r:-.22},
 {x:-1050,z:-2850,w:900,d:650,r:.1},{x:1200,z:-3500,w:1000,d:750,r:.28}
@@ -336,8 +335,8 @@ lakeData.forEach(l=>{
  const water=new THREE.Mesh(new THREE.PlaneGeometry(l.w,l.d),waterMat);
  water.rotation.x=-Math.PI/2;water.rotation.z=l.r;water.position.set(l.x,.035,l.z);scene.add(water);
 });
-const sea=new THREE.Mesh(new THREE.PlaneGeometry(3600,3600),new THREE.MeshStandardMaterial({color:region===0?0x167da6:0x126d86,roughness:.24,metalness:.02,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-4}));
-sea.rotation.x=-Math.PI/2;sea.position.set(5600,.012,-5200);sea.renderOrder=1;scene.add(sea);
+const sea=new THREE.Mesh(new THREE.PlaneGeometry(5000,5000),new THREE.MeshStandardMaterial({color:region===0?0x167da6:0x126d86,roughness:.2,metalness:.05}));
+sea.rotation.x=-Math.PI/2;sea.position.set(1900,.025,-3000);scene.add(sea);
 const mountainMats=[
 new THREE.MeshStandardMaterial({color:0x536b52,roughness:1,flatShading:true}),
 new THREE.MeshStandardMaterial({color:0x65725e,roughness:1,flatShading:true}),
