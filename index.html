@@ -103,7 +103,7 @@ async function syncCreditsFromServer(){
 async function processPayPalReturn(){
  const q=new URLSearchParams(location.search);
  const orderId=q.get('token');
- if(!orderId||!q.get('PayerID'))return;
+ if(!orderId)return;
  if(!PAYMENT_API_URL){
   alert('Die PayPal-Zahlung wurde abgeschlossen. Die automatische Credit-Gutschrift ist noch nicht konfiguriert.');
   history.replaceState({},'',location.pathname);
