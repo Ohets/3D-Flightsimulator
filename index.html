@@ -163,12 +163,14 @@ const c=document.getElementById('canvas-container');
 if(scene)disposeSceneResources(scene);
 scene=new THREE.Scene();scene.background=new THREE.Color(0x87ceeb);scene.fog=new THREE.FogExp2(0x87ceeb,.00055);camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,14000);
 if(!renderer){
- renderer=new THREE.WebGLRenderer({antialias:true,logarithmicDepthBuffer:true});
+ renderer=new THREE.WebGLRenderer({antialias:true,depth:true,stencil:false,powerPreference:'high-performance'});
+ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
  renderer.setSize(innerWidth,innerHeight);
- renderer.shadowMap.enabled=true;
+ renderer.shadowMap.enabled=false;
  c.innerHTML='';
  c.appendChild(renderer.domElement);
 }else{
+ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
  renderer.setSize(innerWidth,innerHeight);
 }
 scene.add(new THREE.AmbientLight(0xffffff,.6));const sun=new THREE.DirectionalLight(0xfffaed,.8);sun.position.set(500,1000,500);scene.add(sun);
@@ -688,7 +690,7 @@ function updateRain(delta){
  window.rainGroup.children[0].geometry.attributes.position.needsUpdate=true;
 }
 function buildMissionRing(){if(ringTarget)scene.remove(ringTarget);const m=missionData[saveState.currentMission];ringTarget=new THREE.Mesh(new THREE.TorusGeometry(12,1.5,8,24),new THREE.MeshBasicMaterial({color:0xffff00}));ringTarget.position.set(m.targetPos.x,m.targetPos.y,m.targetPos.z);scene.add(ringTarget);document.getElementById('hud-mission-desc').innerText='Ziel: '+m.name+' - '+m.desc;}
-function onWindowResize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}
+function onWindowResize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));renderer.setSize(innerWidth,innerHeight);}
 let crashState={active:false,time:0,effect:null};
 function triggerCrash(reason="Bodenkollision"){
  if(crashState.active||!airplane||!gameRunning)return;
