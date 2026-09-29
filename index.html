@@ -108,6 +108,106 @@ if(region===1){
  const coast=new THREE.Mesh(new THREE.PlaneGeometry(9000,3200),waterMat2);coast.rotation.x=-Math.PI/2;coast.position.set(2600,.025,-5200);scene.add(coast);
  for(let i=0;i<30;i++){const x=-3600+(i*317)%7200,z=-700-(i*283)%6500;const t=new THREE.Mesh(new THREE.ConeGeometry(18+(i%4)*5,55+(i%3)*12,7),forestMat);t.position.set(x,30,z);scene.add(t);}
  for(let i=0;i<8;i++){const island=new THREE.Mesh(new THREE.CylinderGeometry(55+i*9,95+i*12,10,8),sandMat);island.position.set(500+(i%8)*380,5,-1800-i*360);scene.add(island);}
+
+ // Markante Orientierungspunkte für Mission 21-40
+ const roadMat=new THREE.MeshStandardMaterial({color:0x3b3b3b,roughness:.95});
+ const roadLineMat=new THREE.MeshBasicMaterial({color:0xf4d35e});
+ const buildingMat=new THREE.MeshStandardMaterial({color:0xb8a58a,roughness:.9});
+ const roofMat=new THREE.MeshStandardMaterial({color:0x5a3d32,roughness:1});
+ const towerMat=new THREE.MeshStandardMaterial({color:0x8d8d8d,roughness:.8});
+ const beaconMat=new THREE.MeshBasicMaterial({color:0xff3030});
+ const waterTowerMat=new THREE.MeshStandardMaterial({color:0x9aa0a6,roughness:.7});
+
+ // Lange Straßen als gut erkennbare Navigationslinien
+ for(let r=0;r<5;r++){
+  const road=new THREE.Mesh(new THREE.PlaneGeometry(24,1350),roadMat);
+  road.rotation.x=-Math.PI/2;
+  road.rotation.z=(r%2===0?0.08:-0.06);
+  road.position.set(-2800+r*1400,.055,-900-r*1200);
+  scene.add(road);
+  for(let m=0;m<10;m++){
+   const mark=new THREE.Mesh(new THREE.PlaneGeometry(2,45),roadLineMat);
+   mark.rotation.x=-Math.PI/2;
+   mark.rotation.z=road.rotation.z;
+   mark.position.set(road.position.x,.07,road.position.z-600+m*125);
+   scene.add(mark);
+  }
+ }
+
+ // Mehrere kleine Siedlungen / Häusergruppen
+ for(let s=0;s<6;s++){
+  const village=new THREE.Group();
+  const vx=-2800+(s%3)*2700, vz=-1300-Math.floor(s/3)*3000;
+  for(let h=0;h<7;h++){
+   const house=new THREE.Mesh(new THREE.BoxGeometry(55,28,45),buildingMat);
+   house.position.set((h%3)*85-80,14,Math.floor(h/3)*80-60);
+   village.add(house);
+   const roof=new THREE.Mesh(new THREE.ConeGeometry(38,22,4),roofMat);
+   roof.rotation.y=Math.PI/4;
+   roof.position.set(house.position.x,39,house.position.z);
+   village.add(roof);
+  }
+  village.position.set(vx,0,vz);
+  scene.add(village);
+ }
+
+ // Hohe Funktürme / Navigationsmasten
+ for(let t=0;t<7;t++){
+  const tower=new THREE.Group();
+  const mast=new THREE.Mesh(new THREE.CylinderGeometry(2.2,3.2,110,7),towerMat);
+  mast.position.y=55;tower.add(mast);
+  for(let q=0;q<3;q++){
+   const arm=new THREE.Mesh(new THREE.BoxGeometry(22,2,2),towerMat);
+   arm.position.set(0,35+q*25,0);tower.add(arm);
+  }
+  const beacon=new THREE.Mesh(new THREE.SphereGeometry(5,8,8),beaconMat);
+  beacon.position.y=114;tower.add(beacon);
+  tower.position.set(-3300+(t%4)*2100,0,-1800-Math.floor(t/4)*3600);
+  scene.add(tower);
+ }
+
+ // Windräder als sehr weit sichtbare Landmarken
+ for(let w=0;w<8;w++){
+  const turbine=new THREE.Group();
+  const pole=new THREE.Mesh(new THREE.CylinderGeometry(3,5,95,8),towerMat);
+  pole.position.y=47.5;turbine.add(pole);
+  const hub=new THREE.Mesh(new THREE.SphereGeometry(7,8,8),whiteMat);
+  hub.position.y=96;turbine.add(hub);
+  for(let b=0;b<3;b++){
+   const blade=new THREE.Mesh(new THREE.BoxGeometry(3,48,2),whiteMat);
+   blade.position.set(0,120,0);
+   blade.rotation.z=b*Math.PI*2/3;
+   turbine.add(blade);
+  }
+  turbine.position.set(-3000+(w%4)*1900,0,-1100-Math.floor(w/4)*4200);
+  scene.add(turbine);
+ }
+
+ // Kleine markante Wassertürme
+ for(let wt=0;wt<5;wt++){
+  const tank=new THREE.Mesh(new THREE.CylinderGeometry(18,22,16,10),waterTowerMat);
+  tank.position.set(-2400+wt*1200,85,-2400-wt*650);
+  const legGroup=new THREE.Group();
+  for(let l=0;l<4;l++){
+   const leg=new THREE.Mesh(new THREE.CylinderGeometry(2,2,65,6),waterTowerMat);
+   leg.position.set(Math.cos(l*Math.PI/2)*13,45,Math.sin(l*Math.PI/2)*13);
+   legGroup.add(leg);
+  }
+  legGroup.position.set(tank.position.x,0,tank.position.z);
+  scene.add(tank);scene.add(legGroup);
+ }
+
+ // Große Brücke als eindeutiger Orientierungspunkt
+ const bridge=new THREE.Group();
+ const deck=new THREE.Mesh(new THREE.BoxGeometry(620,14,34),roadMat);
+ deck.position.y=70;bridge.add(deck);
+ for(let p=0;p<6;p++){
+  const pillar=new THREE.Mesh(new THREE.BoxGeometry(18,140,18),towerMat);
+  pillar.position.set(-250+p*100,0,0);bridge.add(pillar);
+ }
+ bridge.position.set(1500,0,-4200);
+ bridge.rotation.y=.12;
+ scene.add(bridge);
  return;
 }
 const waterMat=new THREE.MeshStandardMaterial({color:region===0?0x2b8fba:0x1d8fb0,roughness:.18,metalness:.05,transparent:true,opacity:.92});
