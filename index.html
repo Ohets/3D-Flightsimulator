@@ -73,11 +73,36 @@ aircraftData.forEach((ac,idx)=>{const u=saveState.unlockedAircraft.includes(idx)
 missionSelectEl.innerHTML='';missionSelectEl.previousElementSibling.innerText='Mission auswählen (1-40):';missionData.forEach(m=>{const o=document.createElement('option');o.value=m.id;o.selected=saveState.currentMission===m.id;o.innerText=m.name+' (+'+m.reward+' Credits)';missionSelectEl.appendChild(o);});}
 window.selectAircraft=function(idx){saveState.selectedAircraft=idx;saveGame();updateUI();};
 window.buyAircraft=function(idx){const p=aircraftData[idx].price;if(saveState.credits>=p){saveState.credits-=p;saveState.unlockedAircraft.push(idx);saveState.selectedAircraft=idx;saveGame();updateUI();}else alert("Nicht genug Credits! Fliege erst Missionen, um Credits zu verdienen.");};
+function disposeSceneResources(oldScene){
+ if(!oldScene)return;
+ oldScene.traverse(obj=>{
+  if(obj.geometry)obj.geometry.dispose();
+  if(obj.material){
+   const mats=Array.isArray(obj.material)?obj.material:[obj.material];
+   mats.forEach(m=>{
+    if(m.map)m.map.dispose();
+    if(m.normalMap)m.normalMap.dispose();
+    if(m.roughnessMap)m.roughnessMap.dispose();
+    if(m.metalnessMap)m.metalnessMap.dispose();
+    m.dispose();
+   });
+  }
+ });
+ oldScene.clear();
+}
 function init3D(){
 const c=document.getElementById('canvas-container');
-if(renderer){renderer.dispose();renderer.forceContextLoss();}
-if(scene)scene.clear();
-c.innerHTML='';scene=new THREE.Scene();scene.background=new THREE.Color(0x87ceeb);scene.fog=new THREE.FogExp2(0x87ceeb,.00055);camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,14000);renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;c.appendChild(renderer.domElement);
+if(scene)disposeSceneResources(scene);
+scene=new THREE.Scene();scene.background=new THREE.Color(0x87ceeb);scene.fog=new THREE.FogExp2(0x87ceeb,.00055);camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,14000);
+if(!renderer){
+ renderer=new THREE.WebGLRenderer({antialias:true});
+ renderer.setSize(innerWidth,innerHeight);
+ renderer.shadowMap.enabled=true;
+ c.innerHTML='';
+ c.appendChild(renderer.domElement);
+}else{
+ renderer.setSize(innerWidth,innerHeight);
+}
 scene.add(new THREE.AmbientLight(0xffffff,.6));const sun=new THREE.DirectionalLight(0xfffaed,.8);sun.position.set(500,1000,500);scene.add(sun);
 const region=saveState.currentMission>=20?1:0;
 const groundColor=region===0?0x557a46:0x8b7650;
