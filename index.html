@@ -370,39 +370,185 @@ function buildAirportExpansion(region=0){
 function buildAirplaneModel(){
 const ac=aircraftData[saveState.selectedAircraft];
 airplane=new THREE.Group();
-const bodyMat=new THREE.MeshStandardMaterial({color:ac.color,roughness:.4});
-const darkMat=new THREE.MeshStandardMaterial({color:0x222222,roughness:.5});
-const glassMat=new THREE.MeshStandardMaterial({color:0x00dfff,transparent:true,opacity:.6});
-const whiteMat=new THREE.MeshStandardMaterial({color:0xf5f5f5,roughness:.45});
-if(ac.type==="helicopter"){
- const body=new THREE.Mesh(new THREE.SphereGeometry(2.1,12,8),bodyMat);body.scale.set(1.35,.8,2.2);airplane.add(body);
- const tail=new THREE.Mesh(new THREE.BoxGeometry(.7,.7,5.5),bodyMat);tail.position.z=4.5;airplane.add(tail);
- const tailFin=new THREE.Mesh(new THREE.BoxGeometry(.15,1.8,1.8),bodyMat);tailFin.position.set(0,1,6.5);airplane.add(tailFin);
- const cabin=new THREE.Mesh(new THREE.BoxGeometry(2.3,1.3,1.8),glassMat);cabin.position.set(0,.25,-1.1);airplane.add(cabin);
- const rotor=new THREE.Group();const rotorHub=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.35,8),darkMat);rotorHub.rotation.x=Math.PI/2;rotorHub.position.y=2.4;rotor.add(rotorHub);
- for(let i=0;i<4;i++){const blade=new THREE.Mesh(new THREE.BoxGeometry(.45,7,.16),darkMat);blade.position.y=2.45;blade.rotation.y=i*Math.PI/2;rotor.add(blade);}airplane.add(rotor);airplane.userData.rotor=rotor;
- const tailRotor=new THREE.Group();for(let i=0;i<4;i++){const b=new THREE.Mesh(new THREE.BoxGeometry(.18,2.2,.12),darkMat);b.rotation.z=i*Math.PI/2;tailRotor.add(b);}tailRotor.position.set(0,1,7);airplane.add(tailRotor);airplane.userData.tailRotor=tailRotor;
-}else if(ac.type==="drone"){
- const core=new THREE.Mesh(new THREE.BoxGeometry(2.6,.8,2.6),bodyMat);airplane.add(core);
- const arms=[[-2,0,-2],[2,0,-2],[-2,0,2],[2,0,2]],rotors=[];
- arms.forEach(p=>{const arm=new THREE.Mesh(new THREE.BoxGeometry(4,.25,.25),bodyMat);arm.position.set(p[0]/2,0,p[2]/2);arm.rotation.y=Math.atan2(p[2],p[0]);airplane.add(arm);const rotor=new THREE.Mesh(new THREE.CylinderGeometry(1.05,1.05,.12,16),darkMat);rotor.position.set(p[0],.55,p[2]);airplane.add(rotor);rotors.push(rotor);});
- const cam=new THREE.Mesh(new THREE.SphereGeometry(.35,8,8),glassMat);cam.position.set(0,-.5,-1.5);airplane.add(cam);airplane.userData.rotors=rotors;
-}else{
- const length=ac.type==="superjumbo"?12:ac.type==="jumbo"?10:ac.type==="airliner"?8:8;
- const width=ac.type==="superjumbo"?20:ac.type==="jumbo"?18:ac.type==="airliner"?15:16;
- const fuselage=new THREE.Mesh(new THREE.CylinderGeometry(ac.type==="superjumbo"?1.8:1.35,1,length,10),bodyMat);fuselage.rotation.x=Math.PI/2;airplane.add(fuselage);
- if(ac.type==="superjumbo"){const upper=new THREE.Mesh(new THREE.CylinderGeometry(1.35,.95,9,10),whiteMat);upper.rotation.x=Math.PI/2;upper.position.y=.85;airplane.add(upper);}
- const cockpit=new THREE.Mesh(new THREE.BoxGeometry(1.6,.9,1.7),glassMat);cockpit.position.set(0,.65,-length*.22);airplane.add(cockpit);
- const wing=new THREE.Mesh(new THREE.BoxGeometry(width,.22,2.8),bodyMat);wing.position.set(0,.25,-.4);airplane.add(wing);
- const tailH=new THREE.Mesh(new THREE.BoxGeometry(5,.15,1.5),bodyMat);tailH.position.set(0,.3,length*.42);airplane.add(tailH);
- const tailV=new THREE.Mesh(new THREE.BoxGeometry(.18,2.8,1.7),bodyMat);tailV.position.set(0,1.35,length*.42);airplane.add(tailV);
- const engineCount=ac.type==="superjumbo"||ac.type==="jumbo"?4:2,engineXs=engineCount===4?[-6,-2,2,6]:[-4,4];
- engineXs.forEach(x=>{const eg=new THREE.Mesh(new THREE.CylinderGeometry(.65,.5,2.4,8),darkMat);eg.rotation.x=Math.PI/2;eg.position.set(x,.05,-1);airplane.add(eg);});
- propellerLeft=new THREE.Mesh(new THREE.BoxGeometry(2.8,.2,.05),darkMat);propellerLeft.position.set(engineCount===4?-6:-4,.05,-2.25);airplane.add(propellerLeft);
- propellerRight=propellerLeft.clone();propellerRight.position.x=engineCount===4?6:4;airplane.add(propellerRight);
+propellerLeft=null;propellerRight=null;
+const bodyMat=new THREE.MeshStandardMaterial({color:ac.color,roughness:.38,metalness:.05});
+const darkMat=new THREE.MeshStandardMaterial({color:0x171b20,roughness:.42,metalness:.15});
+const glassMat=new THREE.MeshStandardMaterial({color:0x173b55,roughness:.18,metalness:.25});
+const whiteMat=new THREE.MeshStandardMaterial({color:0xf3f4f6,roughness:.38});
+const accentMat=new THREE.MeshStandardMaterial({color:0x2453a6,roughness:.35});
+const redMat=new THREE.MeshStandardMaterial({color:0xc92b35,roughness:.38});
+const metalMat=new THREE.MeshStandardMaterial({color:0x8b9299,roughness:.3,metalness:.7});
+const rubberMat=new THREE.MeshStandardMaterial({color:0x111111,roughness:.9});
+
+function addWingShape(span,rootChord,tipChord,sweep,thickness,material,y=.05){
+ const sh=new THREE.Shape();
+ sh.moveTo(-span*.08,-rootChord*.52);sh.lineTo(-span,-rootChord*.52+sweep);
+ sh.lineTo(-span,-rootChord*.52+sweep+tipChord);sh.lineTo(-span*.08,rootChord*.48);
+ sh.lineTo(span*.08,rootChord*.48);sh.lineTo(span,rootChord*.48-sweep-tipChord);
+ sh.lineTo(span,-rootChord*.52+sweep);sh.lineTo(span*.08,-rootChord*.52);sh.lineTo(-span*.08,-rootChord*.52);
+ const geo=new THREE.ExtrudeGeometry(sh,{depth:thickness,bevelEnabled:true,bevelSegments:1,steps:1,bevelSize:.04,bevelThickness:.03});
+ geo.rotateX(Math.PI/2);
+ const mesh=new THREE.Mesh(geo,material);mesh.position.y=y;airplane.add(mesh);return mesh;
 }
-if(!propellerLeft){propellerLeft=new THREE.Mesh(new THREE.BoxGeometry(.01,.01,.01),darkMat);propellerRight=propellerLeft.clone();airplane.add(propellerLeft,propellerRight);}
-airplane.userData.aircraftType=ac.type||"prop";scene.add(airplane);document.getElementById('hud-plane-name').innerText=ac.name;
+function addWindowRow(radius,zStart,zEnd,count,y=.45,stepY=0){
+ for(let side of [-1,1]){
+  for(let i=0;i<count;i++){
+   const t=count===1?0:i/(count-1);
+   const z=zStart+(zEnd-zStart)*t;
+   const w=new THREE.Mesh(new THREE.BoxGeometry(.18,.16,.34),glassMat);
+   w.position.set(side*radius,y+Math.abs(z-zStart)*0+stepY,z);
+   w.rotation.y=side*.08;airplane.add(w);
+  }
+ }
+}
+function addLandingGear(x,z,scale=1){
+ const strut=new THREE.Mesh(new THREE.CylinderGeometry(.09,.12,1.05,6),metalMat);
+ strut.position.set(x,-.65,z);airplane.add(strut);
+ const wheel=new THREE.Mesh(new THREE.TorusGeometry(.27*scale,.09*scale,8,14),rubberMat);
+ wheel.rotation.x=Math.PI/2;wheel.position.set(x,-1.15,z);airplane.add(wheel);
+}
+function addJetEngine(x,z,size=1){
+ const nacelle=new THREE.Mesh(new THREE.CylinderGeometry(.62*size,.48*size,2.55*size,16),whiteMat);
+ nacelle.rotation.x=Math.PI/2;nacelle.position.set(x,-.05,z);airplane.add(nacelle);
+ const intake=new THREE.Mesh(new THREE.TorusGeometry(.48*size,.09*size,8,18),metalMat);
+ intake.rotation.x=Math.PI/2;intake.position.set(x,-.05,z-1.28*size);airplane.add(intake);
+ const fan=new THREE.Mesh(new THREE.CylinderGeometry(.38*size,.38*size,.08*size,16),darkMat);
+ fan.rotation.x=Math.PI/2;fan.position.set(x,-.05,z-1.31*size);airplane.add(fan);
+}
+
+if(ac.type==="helicopter"){
+ const body=new THREE.Mesh(new THREE.SphereGeometry(2.15,18,12),bodyMat);
+ body.scale.set(1.3,.82,1.85);body.position.set(0,.05,-.65);airplane.add(body);
+ const nose=new THREE.Mesh(new THREE.SphereGeometry(1.55,16,10),glassMat);
+ nose.scale.set(1.02,.72,.82);nose.position.set(0,.22,-1.95);airplane.add(nose);
+ const windshieldBar=new THREE.Mesh(new THREE.BoxGeometry(.12,.95,.12),darkMat);
+ windshieldBar.position.set(0,.28,-2.65);airplane.add(windshieldBar);
+ for(let side of [-1,1]){
+  const sideWin=new THREE.Mesh(new THREE.BoxGeometry(.08,.72,.9),glassMat);
+  sideWin.position.set(side*1.12,.25,-.85);sideWin.rotation.z=side*.12;airplane.add(sideWin);
+ }
+ const tailBoom=new THREE.Mesh(new THREE.CylinderGeometry(.27,.48,5.8,10),bodyMat);
+ tailBoom.rotation.x=Math.PI/2;tailBoom.position.set(0,.25,3.25);airplane.add(tailBoom);
+ const fin=new THREE.Mesh(new THREE.BoxGeometry(.18,1.8,1.8),bodyMat);
+ fin.position.set(0,1.12,5.7);fin.rotation.x=-.15;airplane.add(fin);
+ const tailAccent=new THREE.Mesh(new THREE.BoxGeometry(.5,.16,2.1),redMat);
+ tailAccent.position.set(0,.2,4.35);airplane.add(tailAccent);
+ const skidMat=metalMat;
+ for(let side of [-1,1]){
+  const skid=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,3.6,8),skidMat);
+  skid.rotation.z=Math.PI/2;skid.position.set(side*.92,-1.15,.2);airplane.add(skid);
+  const frontLeg=new THREE.Mesh(new THREE.CylinderGeometry(.07,.1,1.05,6),skidMat);
+  frontLeg.rotation.z=side*.2;frontLeg.position.set(side*.72,-.75,-1.0);airplane.add(frontLeg);
+  const rearLeg=frontLeg.clone();rearLeg.position.set(side*.72,-.75,1.55);airplane.add(rearLeg);
+ }
+ const rotor=new THREE.Group();
+ const rotorHub=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.38,10),darkMat);
+ rotorHub.rotation.x=Math.PI/2;rotorHub.position.y=2.25;rotor.add(rotorHub);
+ for(let i=0;i<4;i++){
+  const blade=new THREE.Mesh(new THREE.BoxGeometry(.32,7.2,.12),darkMat);
+  blade.position.y=2.27;blade.rotation.y=i*Math.PI/2;rotor.add(blade);
+ }
+ airplane.add(rotor);airplane.userData.rotor=rotor;
+ const tailRotor=new THREE.Group();
+ const tailHub=new THREE.Mesh(new THREE.CylinderGeometry(.18,.18,.25,8),darkMat);
+ tailHub.rotation.z=Math.PI/2;tailRotor.add(tailHub);
+ for(let i=0;i<5;i++){
+  const b=new THREE.Mesh(new THREE.BoxGeometry(.14,1.9,.08),darkMat);
+  b.rotation.z=i*Math.PI*2/5;tailRotor.add(b);
+ }
+ tailRotor.position.set(0,1.0,6.0);tailRotor.rotation.y=Math.PI/2;
+ airplane.add(tailRotor);airplane.userData.tailRotor=tailRotor;
+}else if(ac.type==="drone"){
+ const center=new THREE.Mesh(new THREE.BoxGeometry(2.25,.62,2.7),bodyMat);
+ center.scale.set(1,.95,1);airplane.add(center);
+ const top=new THREE.Mesh(new THREE.BoxGeometry(1.8,.24,1.8),whiteMat);
+ top.position.y=.38;top.rotation.y=Math.PI/4;airplane.add(top);
+ const arms=[[-2.45,2.0],[2.45,2.0],[-2.45,-2.0],[2.45,-2.0]],rotors=[];
+ arms.forEach((p,i)=>{
+  const arm=new THREE.Mesh(new THREE.CylinderGeometry(.13,.13,3.2,8),darkMat);
+  arm.rotation.z=Math.PI/2;arm.rotation.y=Math.atan2(p[1],p[0]);arm.position.set(p[0]/2,0,p[1]/2);airplane.add(arm);
+  const motor=new THREE.Mesh(new THREE.CylinderGeometry(.32,.32,.35,10),darkMat);
+  motor.position.set(p[0],.18,p[1]);airplane.add(motor);
+  const rotor=new THREE.Group();
+  for(let b=0;b<2;b++){
+   const blade=new THREE.Mesh(new THREE.BoxGeometry(.16,2.1,.045),darkMat);
+   blade.rotation.z=b*Math.PI/2;rotor.add(blade);
+  }
+  rotor.position.set(p[0],.42,p[1]);airplane.add(rotor);rotors.push(rotor);
+ });
+ const cameraHousing=new THREE.Mesh(new THREE.SphereGeometry(.42,12,8),darkMat);
+ cameraHousing.position.set(0,-.48,-1.25);airplane.add(cameraHousing);
+ const lens=new THREE.Mesh(new THREE.SphereGeometry(.22,10,8),glassMat);
+ lens.position.set(0,-.5,-1.58);airplane.add(lens);
+ airplane.userData.rotors=rotors;
+}else{
+ const isA320=ac.type==="airliner",is747=ac.type==="jumbo",isA380=ac.type==="superjumbo";
+ const length=isA380?15:is747?13.5:11.5;
+ const radius=isA380?1.72:is747?1.55:1.35;
+ const span=isA380?22:is747?20:17.5;
+ const wingChord=isA380?4.0:is747?3.7:3.25;
+ const fuselage=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius*.82,length,18),bodyMat);
+ fuselage.rotation.x=Math.PI/2;airplane.add(fuselage);
+ const nose=new THREE.Mesh(new THREE.SphereGeometry(radius,16,10),bodyMat);
+ nose.scale.set(1,.92,1.35);nose.position.z=-length/2-.35;airplane.add(nose);
+ const tailCone=new THREE.Mesh(new THREE.CylinderGeometry(radius*.82,.55,3.2,14),bodyMat);
+ tailCone.rotation.x=Math.PI/2;tailCone.position.z=length/2+1.2;airplane.add(tailCone);
+ addWingShape(span,wingChord,isA320?1.0:is747?1.25:1.35,isA320?1.5:is747?1.7:1.9,.28,bodyMat,.05);
+ const tailWing=new THREE.Mesh(new THREE.BoxGeometry(isA320?5.8:6.8,.18,1.65),bodyMat);
+ tailWing.position.set(0,.45,length*.43);airplane.add(tailWing);
+ const fin=new THREE.Mesh(new THREE.BoxGeometry(.24,isA380?3.7:3.35,2.2),bodyMat);
+ fin.position.set(0,(isA380?1.8:1.65),length*.43);fin.rotation.x=-.12;airplane.add(fin);
+ const cockpit=new THREE.Group();
+ const frontGlass=new THREE.Mesh(new THREE.BoxGeometry(radius*1.55,.7,1.05),glassMat);
+ frontGlass.position.set(0,.62,-length*.43);frontGlass.rotation.x=-.08;cockpit.add(frontGlass);
+ for(let side of [-1,1]){
+  const sideGlass=new THREE.Mesh(new THREE.BoxGeometry(.12,.55,1.05),glassMat);
+  sideGlass.position.set(side*radius*.82,.63,-length*.39);sideGlass.rotation.y=side*.15;cockpit.add(sideGlass);
+ }
+ airplane.add(cockpit);
+ const windowRadius=radius*.94;
+ addWindowRow(windowRadius,-length*.30,length*.31,isA380?22:is747?19:17,.52,0);
+ if(isA380)addWindowRow(windowRadius,-length*.30,length*.31,22,.92,0);
+ if(is747){
+  const hump=new THREE.Mesh(new THREE.CylinderGeometry(1.32,1.42,5.0,16),whiteMat);
+  hump.rotation.x=Math.PI/2;hump.position.set(0,.92,-2.2);airplane.add(hump);
+  addWindowRow(1.27,-4.0,.15,9,1.18,0);
+ }
+ const engineCount=isA320?2:4;
+ const engineXs=engineCount===2?[-5.0,5.0]:[-7.4,-2.5,2.5,7.4];
+ engineXs.forEach((x,i)=>addJetEngine(x,-.75,isA380?.95:is747?.9:.82));
+ const gearXs=isA320?[-3.4,3.4]:[-4.6,4.6];
+ addLandingGear(0,-length*.28,.9);
+ gearXs.forEach(x=>addLandingGear(x,.35,.8));
+ if(isA380||is747){addLandingGear(-1.8,.55,.7);addLandingGear(1.8,.55,.7);}
+ const noseGear=new THREE.Mesh(new THREE.CylinderGeometry(.08,.1,.85,6),metalMat);
+ noseGear.position.set(0,-.68,-length*.34);airplane.add(noseGear);
+ const noseWheel=new THREE.Mesh(new THREE.TorusGeometry(.23,.075,8,12),rubberMat);
+ noseWheel.rotation.x=Math.PI/2;noseWheel.position.set(0,-1.08,-length*.34);airplane.add(noseWheel);
+ if(isA320){
+  const stripe=new THREE.Mesh(new THREE.BoxGeometry(radius*2.05,.12,length*.58),accentMat);
+  stripe.position.set(0,.18,.15);airplane.add(stripe);
+  const tailBadge=new THREE.Mesh(new THREE.BoxGeometry(.3,2.2,1.9),accentMat);
+  tailBadge.position.set(0,1.65,length*.43);airplane.add(tailBadge);
+ }else if(is747){
+  const stripe=new THREE.Mesh(new THREE.BoxGeometry(radius*2.12,.13,length*.62),accentMat);
+  stripe.position.set(0,.25,.25);airplane.add(stripe);
+  const tailBadge=new THREE.Mesh(new THREE.BoxGeometry(.3,2.7,2.0),accentMat);
+  tailBadge.position.set(0,1.65,length*.43);airplane.add(tailBadge);
+ }else if(isA380){
+  const stripe=new THREE.Mesh(new THREE.BoxGeometry(radius*2.15,.13,length*.68),redMat);
+  stripe.position.set(0,.25,.15);airplane.add(stripe);
+  const tailBadge=new THREE.Mesh(new THREE.BoxGeometry(.3,3.0,2.1),redMat);
+  tailBadge.position.set(0,1.85,length*.43);airplane.add(tailBadge);
+ }
+}
+if(!propellerLeft){
+ propellerLeft=new THREE.Mesh(new THREE.BoxGeometry(.01,.01,.01),darkMat);
+ propellerRight=propellerLeft.clone();airplane.add(propellerLeft,propellerRight);
+}
+airplane.userData.aircraftType=ac.type||"prop";
+scene.add(airplane);
+document.getElementById('hud-plane-name').innerText=ac.name;
 }
 function buildRain(){
  const rainGroup=new THREE.Group();
