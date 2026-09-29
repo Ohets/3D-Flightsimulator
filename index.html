@@ -36,6 +36,7 @@
         #start-btn:active { transform:scale(.95); } #credits-display { font-size:20px; color:#ffff00; font-weight:bold; margin-bottom:15px; background:rgba(0,0,0,.3); padding:5px 15px; border-radius:20px; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 </head>
 <body>
 <div id="canvas-container"></div>
@@ -45,7 +46,7 @@
 <div class="control-group"><div class="throttle-container"><span class="throttle-label">SCHUB</span><button class="btn-touch" id="btn-throttle-up">▲</button><div style="height:10px;"></div><button class="btn-touch" id="btn-throttle-down">▼</button></div><div class="vertical-controls" style="display:flex;flex-direction:row;align-items:center;gap:10px;"><button class="btn-touch" id="btn-roll-left">◀</button><button class="btn-touch" id="btn-roll-right">▶</button></div></div>
 <div class="control-group vertical-controls" style="justify-content:center;"><button class="btn-touch" id="btn-pitch-down">▲</button><div style="height:15px;text-align:center;color:rgba(255,255,255,.4);font-size:12px;font-weight:bold;">PITCH</div><button class="btn-touch" id="btn-pitch-up">▼</button></div>
 </div>
-<div id="menu-overlay"><h1>TURBOPROP FLIGHT SIMULATOR</h1><p>HTML5 Android Prototyp (20 Missionen & 10 Flugzeuge)</p><div id="credits-display">Deine Credits: <span id="menu-credits">0</span> 🪙</div><div class="shop-container" id="shop-list"></div><div class="mission-selector"><label for="mission-select">Mission auswählen (1-20):</label><select id="mission-select"></select></div><button id="start-btn">FLUG STARTEN</button></div>
+<div id="menu-overlay"><h1>TURBOPROP FLIGHT SIMULATOR</h1><p>HTML5 Android Prototyp (40 Missionen & 15 Flugzeuge)</p><div id="credits-display">Deine Credits: <span id="menu-credits">0</span> 🪙</div><div class="shop-container" id="shop-list"></div><div class="mission-selector"><label for="mission-select">Mission auswählen (1-20):</label><select id="mission-select"></select></div><button id="start-btn">FLUG STARTEN</button></div>
 <script>
 let saveState={credits:0,unlockedAircraft:[0],selectedAircraft:0,currentMission:0};
 if(localStorage.getItem('turboprop_sim_save')){try{saveState=JSON.parse(localStorage.getItem('turboprop_sim_save'));}catch(e){console.error(e);}}
@@ -71,6 +72,23 @@ for(let i=1;i<=40;i++)missionData.push({id:i-1,name:"Mission "+i+": "+(i===1?"Er
 let scene,camera,renderer,airplane,propellerLeft,propellerRight,ringTarget,clock=new THREE.Clock();
 let physics={speed:0,throttle:0,pitchSpeed:0,rollSpeed:0,yawSpeed:0,altitude:0,velocity:new THREE.Vector3(0,0,0),orientation:new THREE.Quaternion()};
 let inputs={pitchUp:false,pitchDown:false,rollLeft:false,rollRight:false,throttleUp:false,throttleDown:false};
+const realModelUrls={
+ airliner:"https://cdn.jsdelivr.net/gh/amvlab/aircraft-models@main/models/A320_nologo.glb",
+ jumbo:"https://cdn.jsdelivr.net/gh/bilawalsidhu/gods-eye-view@main/public/models/airplane.glb",
+ superjumbo:"https://cdn.jsdelivr.net/gh/amvlab/aircraft-models@main/models/A380_nologo.glb",
+ helicopter:"https://cdn.jsdelivr.net/gh/mykolaantoniv/apex-warfare@main/public/models/attack-heli.glb",
+ drone:"https://cdn.jsdelivr.net/gh/amvlab/aircraft-models@main/models/drone_nologo.glb"
+};
+const realModelConfig={
+ airliner:{length:14,yaw:0},
+ jumbo:{length:16,yaw:Math.PI/2},
+ superjumbo:{length:18,yaw:0},
+ helicopter:{length:10,yaw:Math.PI},
+ drone:{length:6,yaw:0}
+};
+let gltfLoader=null;
+if(window.THREE&&THREE.GLTFLoader)gltfLoader=new THREE.GLTFLoader();
+
 const shopListEl=document.getElementById('shop-list'),missionSelectEl=document.getElementById('mission-select'),menuOverlay=document.getElementById('menu-overlay');
 function updateUI(){
 document.getElementById('menu-credits').innerText=saveState.credits;document.getElementById('hud-credits').innerText=saveState.credits;shopListEl.innerHTML='';
@@ -549,6 +567,36 @@ if(!propellerLeft){
 airplane.userData.aircraftType=ac.type||"prop";
 scene.add(airplane);
 document.getElementById('hud-plane-name').innerText=ac.name;
+loadRealAircraftModel(ac);
+
+}
+function loadRealAircraftModel(ac){
+ if(!gltfLoader||!realModelUrls[ac.type]||!airplane)return;
+ const host=airplane;
+ const token={};
+ host.userData.realModelToken=token;
+ const cfg=realModelConfig[ac.type]||{length:12,yaw:0};
+ gltfLoader.load(realModelUrls[ac.type],gltf=>{
+  if(!airplane||airplane!==host||host.userData.realModelToken!==token||!scene)return;
+  const model=gltf.scene;
+  model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+  const box=new THREE.Box3().setFromObject(model);
+  const size=box.getSize(new THREE.Vector3());
+  const maxDim=Math.max(size.x,size.y,size.z)||1;
+  const scale=cfg.length/maxDim;
+  const center=box.getCenter(new THREE.Vector3());
+  model.scale.setScalar(scale);
+  model.position.set(-center.x*scale,-center.y*scale,-center.z*scale);
+  model.rotation.y=cfg.yaw;
+  while(host.children.length)host.remove(host.children[0]);
+  host.add(model);
+  host.userData.realModel=model;
+  host.userData.mixer=null;
+  if(gltf.animations&&gltf.animations.length){
+   host.userData.mixer=new THREE.AnimationMixer(model);
+   gltf.animations.forEach(clip=>host.userData.mixer.clipAction(clip).play());
+  }
+ },undefined,error=>console.warn('3D-Modell konnte nicht geladen werden:',ac.name,error));
 }
 function buildRain(){
  const rainGroup=new THREE.Group();
@@ -587,6 +635,7 @@ if(propellerLeft&&propellerRight){
 if(airplane.userData.rotor)airplane.userData.rotor.rotation.y+=dt*(8+physics.throttle*.08);
 if(airplane.userData.tailRotor)airplane.userData.tailRotor.rotation.x+=dt*(12+physics.throttle*.1);
 if(airplane.userData.rotors)airplane.userData.rotors.forEach((r,i)=>r.rotation.y+=dt*(12+(i%2)*2+physics.throttle*.1));
+if(airplane.userData.mixer)airplane.userData.mixer.update(dt);
 
 // Zielgeschwindigkeit mit Luftwiderstand statt sofortiger Geschwindigkeitsänderung
 const forwardVector=new THREE.Vector3(0,0,-1).applyQuaternion(airplane.quaternion);
