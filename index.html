@@ -101,26 +101,26 @@ async function syncCreditsFromServer(){
  }catch(e){console.warn('Credits-Server nicht erreichbar',e);}
 }
 function processPayPalReturn(){
- const q=new URLSearchParams(location.search);
- const paid=q.get('paypal_credits');
- if(!paid)return;
- const amount=Math.max(0,Math.floor(Number(paid)));
  const pendingKey='paypal_pending_purchase';
  let pending=null;
  try{pending=JSON.parse(localStorage.getItem(pendingKey)||'null');}catch(e){pending=null;}
- const elapsed=pending&&Number.isFinite(pending.startedAt)?Date.now()-pending.startedAt:0;
- if(!pending||pending.amount!==amount||elapsed<30000){
-  history.replaceState({},'',location.pathname);
-  alert('Die Zahlung konnte noch nicht bestätigt werden. Bitte den PayPal-Vorgang vollständig abschließen und mindestens 30 Sekunden warten.');
-  return;
- }
+ if(!pending||!Number.isFinite(pending.startedAt)||!Number.isFinite(pending.amount))return;
+ const amount=Math.max(0,Math.floor(Number(pending.amount)));
+ const elapsed=Date.now()-pending.startedAt;
  const allowed=[500,1200,3000,7500];
  if(!allowed.includes(amount)){
+  localStorage.removeItem(pendingKey);
+  return;
+ }
+ if(elapsed<30000){
+  localStorage.removeItem(pendingKey);
   history.replaceState({},'',location.pathname);
+  alert('Du warst weniger als 30 Sekunden bei PayPal. Es wurden keine Credits gutgeschrieben.');
   return;
  }
  const key='paypal_credit_return_'+amount;
  if(localStorage.getItem(key)){
+  localStorage.removeItem(pendingKey);
   history.replaceState({},'',location.pathname);
   return;
  }
@@ -129,7 +129,7 @@ function processPayPalReturn(){
  saveState.credits=(saveState.credits||0)+amount;
  saveGame();
  updateUI();
- alert('PayPal-Rückkehr erkannt: '+amount.toLocaleString('de-AT')+' Credits wurden hinzugefügt.');
+ alert('Du warst '+Math.floor(elapsed/1000)+' Sekunden außerhalb des Spiels. '+amount.toLocaleString('de-AT')+' Credits wurden hinzugefügt.');
  history.replaceState({},'',location.pathname);
 }
 function openCreditShop(){
@@ -142,9 +142,8 @@ function openCreditShop(){
 function closeCreditShop(){const m=document.getElementById('credit-shop-modal');if(m)m.remove();}
 function startCreditPurchase(amount){
  const sep=CREDIT_PAYMENT_URL.includes('?')?'&':'?';
- const returnUrl=location.origin+location.pathname+'?paypal_credits='+encodeURIComponent(amount);
  localStorage.setItem('paypal_pending_purchase',JSON.stringify({amount:amount,startedAt:Date.now()}));
- const target=CREDIT_PAYMENT_URL+sep+'credits='+encodeURIComponent(amount)+'&return='+encodeURIComponent(returnUrl);
+ const target=CREDIT_PAYMENT_URL+sep+'credits='+encodeURIComponent(amount);
  window.location.href=target;
 }
 window.buyAircraft=function(idx){const p=aircraftData[idx].price;if(saveState.credits>=p){saveState.credits-=p;saveState.unlockedAircraft.push(idx);saveState.selectedAircraft=idx;saveGame();updateUI();}else alert("Nicht genug Credits! Fliege erst Missionen, um Credits zu verdienen.");};
@@ -896,6 +895,7 @@ function bindTouchBtn(id,p){
 bindTouchBtn('btn-throttle-up','throttleUp');bindTouchBtn('btn-throttle-down','throttleDown');bindTouchBtn('btn-roll-left','rollLeft');bindTouchBtn('btn-roll-right','rollRight');bindTouchBtn('btn-pitch-up','pitchUp');bindTouchBtn('btn-pitch-down','pitchDown');
 document.getElementById('start-btn').addEventListener('click',()=>{saveState.currentMission=parseInt(missionSelectEl.value);saveGame();menuOverlay.style.display='none';gameRunning=true;init3D();clock.getDelta();startLocalAudio();animate();});updateUI();
 processPayPalReturn();
+window.addEventListener('pageshow',function(){processPayPalReturn();});
 syncCreditsFromServer();
 </script>
 </body>
