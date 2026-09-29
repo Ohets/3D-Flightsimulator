@@ -1,0 +1,19 @@
+CREATE TABLE IF NOT EXISTS players (
+  player_id TEXT PRIMARY KEY,
+  credits INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+  order_id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL,
+  credits INTEGER NOT NULL,
+  amount_cents INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'EUR',
+  status TEXT NOT NULL DEFAULT 'CREATED',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  captured_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_orders_player ON orders(player_id);
