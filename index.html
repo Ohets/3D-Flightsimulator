@@ -100,33 +100,27 @@ async function syncCreditsFromServer(){
   }
  }catch(e){console.warn('Credits-Server nicht erreichbar',e);}
 }
-async function processPayPalReturn(){
+function processPayPalReturn(){
  const q=new URLSearchParams(location.search);
- const orderId=q.get('token');
- if(!orderId)return;
- if(!PAYMENT_API_URL){
-  alert('Die PayPal-Zahlung wurde abgeschlossen. Die automatische Credit-Gutschrift ist noch nicht konfiguriert.');
+ const paid=q.get('paypal_credits');
+ if(!paid)return;
+ const amount=Math.max(0,Math.floor(Number(paid)));
+ const allowed=[500,1200,3000,7500];
+ if(!allowed.includes(amount)){
   history.replaceState({},'',location.pathname);
   return;
  }
- try{
-  const r=await fetch(PAYMENT_API_URL.replace(/\/$/,'')+'/api/capture-order',{
-   method:'POST',
-   headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({orderId,playerId:getPlayerId()})
-  });
-  const data=await r.json();
-  if(!r.ok||!data.ok)throw new Error(data.error||'Gutschrift fehlgeschlagen');
-  saveState.credits=Math.max(0,Math.floor(data.credits||0));
-  saveGame();
-  updateUI();
-  alert('Zahlung erfolgreich! Deine Credits wurden gutgeschrieben.');
- }catch(e){
-  alert('Die PayPal-Zahlung konnte noch nicht gutgeschrieben werden. Bitte Spiel nicht löschen und später erneut öffnen.');
-  console.error(e);
- }finally{
+ const key='paypal_credit_return_'+amount;
+ if(localStorage.getItem(key)){
   history.replaceState({},'',location.pathname);
+  return;
  }
+ localStorage.setItem(key,'1');
+ saveState.credits=(saveState.credits||0)+amount;
+ saveGame();
+ updateUI();
+ alert('PayPal-Rückkehr erkannt: '+amount.toLocaleString('de-AT')+' Credits wurden hinzugefügt.');
+ history.replaceState({},'',location.pathname);
 }
 function openCreditShop(){
  const packages=[{credits:500,price:"2,99 €"},{credits:1200,price:"5,99 €"},{credits:3000,price:"11,99 €"},{credits:7500,price:"24,99 €"}];
@@ -136,24 +130,11 @@ function openCreditShop(){
  const wrap=document.createElement('div');wrap.id='credit-shop-modal';wrap.innerHTML=html;document.body.appendChild(wrap);
 }
 function closeCreditShop(){const m=document.getElementById('credit-shop-modal');if(m)m.remove();}
-async function startCreditPurchase(amount){
- if(!PAYMENT_API_URL){
-  alert('Der automatische PayPal-Credits-Shop ist vorbereitet, aber der Cloudflare-Worker muss noch verbunden werden.');
-  return;
- }
- try{
-  const r=await fetch(PAYMENT_API_URL.replace(/\/$/,'')+'/api/create-order',{
-   method:'POST',
-   headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({package:String(amount),playerId:getPlayerId()})
-  });
-  const data=await r.json();
-  if(!r.ok||!data.approvalUrl)throw new Error(data.error||'PayPal-Bestellung konnte nicht erstellt werden.');
-  window.location.href=data.approvalUrl;
- }catch(e){
-  alert(e.message||'PayPal konnte nicht gestartet werden.');
-  console.error(e);
- }
+function startCreditPurchase(amount){
+ const sep=CREDIT_PAYMENT_URL.includes('?')?'&':'?';
+ const returnUrl=location.origin+location.pathname+'?paypal_credits='+encodeURIComponent(amount);
+ const target=CREDIT_PAYMENT_URL+sep+'credits='+encodeURIComponent(amount)+'&return='+encodeURIComponent(returnUrl);
+ window.location.href=target;
 }
 window.buyAircraft=function(idx){const p=aircraftData[idx].price;if(saveState.credits>=p){saveState.credits-=p;saveState.unlockedAircraft.push(idx);saveState.selectedAircraft=idx;saveGame();updateUI();}else alert("Nicht genug Credits! Fliege erst Missionen, um Credits zu verdienen.");};
 function disposeSceneResources(oldScene){
