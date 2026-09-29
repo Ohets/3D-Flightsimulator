@@ -105,6 +105,15 @@ function processPayPalReturn(){
  const paid=q.get('paypal_credits');
  if(!paid)return;
  const amount=Math.max(0,Math.floor(Number(paid)));
+ const pendingKey='paypal_pending_purchase';
+ let pending=null;
+ try{pending=JSON.parse(localStorage.getItem(pendingKey)||'null');}catch(e){pending=null;}
+ const elapsed=pending&&Number.isFinite(pending.startedAt)?Date.now()-pending.startedAt:0;
+ if(!pending||pending.amount!==amount||elapsed<30000){
+  history.replaceState({},'',location.pathname);
+  alert('Die Zahlung konnte noch nicht bestätigt werden. Bitte den PayPal-Vorgang vollständig abschließen und mindestens 30 Sekunden warten.');
+  return;
+ }
  const allowed=[500,1200,3000,7500];
  if(!allowed.includes(amount)){
   history.replaceState({},'',location.pathname);
@@ -116,6 +125,7 @@ function processPayPalReturn(){
   return;
  }
  localStorage.setItem(key,'1');
+ localStorage.removeItem(pendingKey);
  saveState.credits=(saveState.credits||0)+amount;
  saveGame();
  updateUI();
@@ -133,6 +143,7 @@ function closeCreditShop(){const m=document.getElementById('credit-shop-modal');
 function startCreditPurchase(amount){
  const sep=CREDIT_PAYMENT_URL.includes('?')?'&':'?';
  const returnUrl=location.origin+location.pathname+'?paypal_credits='+encodeURIComponent(amount);
+ localStorage.setItem('paypal_pending_purchase',JSON.stringify({amount:amount,startedAt:Date.now()}));
  const target=CREDIT_PAYMENT_URL+sep+'credits='+encodeURIComponent(amount)+'&return='+encodeURIComponent(returnUrl);
  window.location.href=target;
 }
