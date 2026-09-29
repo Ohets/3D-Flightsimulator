@@ -129,13 +129,19 @@ async function handleCaptureOrder(request, env) {
     return json({ error: "Zahlungsbetrag stimmt nicht mit der Bestellung überein." }, 400);
   }
 
-  await env.DB.prepare(
-    "UPDATE players SET credits = credits + ?, updated_at = CURRENT_TIMESTAMP WHERE player_id = ?"
-  ).bind(stored.credits, playerId).run();
+  const tx = await env.DB.batch([
+    env.DB.prepare(
+      "UPDATE orders SET status = 'CAPTURED', captured_at = CURRENT_TIMESTAMP WHERE order_id = ? AND status = 'CREATED'"
+    ).bind(orderId),
+    env.DB.prepare(
+      "UPDATE players SET credits = credits + ?, updated_at = CURRENT_TIMESTAMP WHERE player_id = ?"
+    ).bind(stored.credits, playerId)
+  ]);
 
-  await env.DB.prepare(
-    "UPDATE orders SET status = 'CAPTURED', captured_at = CURRENT_TIMESTAMP WHERE order_id = ? AND status = 'CREATED'"
-  ).bind(orderId).run();
+  if (!tx?.[0]?.meta?.changes) {
+    const p = await env.DB.prepare("SELECT credits FROM players WHERE player_id = ?").bind(playerId).first();
+    return json({ ok: true, captured: true, credits: p?.credits || 0 });
+  }
 
   const p = await env.DB.prepare("SELECT credits FROM players WHERE player_id = ?").bind(playerId).first();
   return json({ ok: true, captured: true, credits: p?.credits || 0 });
