@@ -908,7 +908,7 @@ function bindTouchBtn(id,p){
  btn.addEventListener('mouseleave',()=>{inputs[p]=false;if(p==='throttleUp')setThrottleSound(false);});
 }
 bindTouchBtn('btn-throttle-up','throttleUp');bindTouchBtn('btn-throttle-down','throttleDown');bindTouchBtn('btn-roll-left','rollLeft');bindTouchBtn('btn-roll-right','rollRight');bindTouchBtn('btn-pitch-up','pitchUp');bindTouchBtn('btn-pitch-down','pitchDown');
-document.getElementById('start-btn').addEventListener('click',()=>{saveState.currentMission=parseInt(missionSelectEl.value);saveGame();menuOverlay.style.display='none';gameRunning=true;init3D();clock.getDelta();startLocalAudio();animate();});updateUI();
+document.getElementById('start-btn').addEventListener('click',()=>{saveState.currentMission=parseInt(missionSelectEl.value);saveGame();menuOverlay.style.display='none';gameRunning=true;init3D();clock.getDelta();animate();});updateUI();
 processPayPalReturn();
 window.addEventListener('pageshow',function(){processPayPalReturn();});
 syncCreditsFromServer();
