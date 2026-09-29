@@ -118,13 +118,6 @@ function processPayPalReturn(){
   alert('Du warst weniger als 30 Sekunden bei PayPal. Es wurden keine Credits gutgeschrieben.');
   return;
  }
- const key='paypal_credit_return_'+amount;
- if(localStorage.getItem(key)){
-  localStorage.removeItem(pendingKey);
-  history.replaceState({},'',location.pathname);
-  return;
- }
- localStorage.setItem(key,'1');
  localStorage.removeItem(pendingKey);
  saveState.credits=(saveState.credits||0)+amount;
  saveGame();
@@ -142,7 +135,8 @@ function openCreditShop(){
 function closeCreditShop(){const m=document.getElementById('credit-shop-modal');if(m)m.remove();}
 function startCreditPurchase(amount){
  const sep=CREDIT_PAYMENT_URL.includes('?')?'&':'?';
- localStorage.setItem('paypal_pending_purchase',JSON.stringify({amount:amount,startedAt:Date.now()}));
+ const purchaseId=(crypto.randomUUID?crypto.randomUUID():('purchase_'+Date.now()+'_'+Math.random().toString(36).slice(2)));
+ localStorage.setItem('paypal_pending_purchase',JSON.stringify({id:purchaseId,amount:amount,startedAt:Date.now()}));
  const target=CREDIT_PAYMENT_URL+sep+'credits='+encodeURIComponent(amount);
  window.location.href=target;
 }
