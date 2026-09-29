@@ -716,10 +716,16 @@ function updateCrash(delta){
   physics.speed=0;physics.throttle=0;physics.pitchSpeed=0;physics.rollSpeed=0;physics.yawSpeed=0;
   physics.velocity.set(0,0,0);
   inputs={pitchUp:false,pitchDown:false,rollLeft:false,rollRight:false,throttleUp:false,throttleDown:false};
-  // Nach einem Crash die komplette aktuelle Region neu aufbauen.
-  // Mission 1-20 startet wieder am ursprünglichen Startpunkt der ersten Region,
-  // Mission 21-40 am Startpunkt der zweiten Region.
-  init3D();
+  // Nach einem Crash nur Flugzeug, Kamera und Mission zurücksetzen.
+  // Die bereits geladene Szenerie bleibt unverändert.
+  const region=saveState.currentMission>=20?1:0;
+  const spawnX=region===1?-850:0;
+  const spawnZ=region===1?-1450:-600;
+  airplane.visible=true;
+  airplane.position.set(spawnX,2,spawnZ);
+  airplane.rotation.set(0,Math.PI,0);
+  camera.position.set(spawnX,6,spawnZ+18);
+  camera.lookAt(airplane.position.clone().add(new THREE.Vector3(0,.5,-2).applyQuaternion(airplane.quaternion)));
   buildMissionRing();
   startLocalAudio();
  }
