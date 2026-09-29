@@ -438,6 +438,9 @@ if(propellerLeft&&propellerRight){
  propellerLeft.rotation.z+=rs;
  propellerRight.rotation.z-=rs;
 }
+if(airplane.userData.rotor)airplane.userData.rotor.rotation.y+=dt*(8+physics.throttle*.08);
+if(airplane.userData.tailRotor)airplane.userData.tailRotor.rotation.x+=dt*(12+physics.throttle*.1);
+if(airplane.userData.rotors)airplane.userData.rotors.forEach((r,i)=>r.rotation.y+=dt*(12+(i%2)*2+physics.throttle*.1));
 
 // Zielgeschwindigkeit mit Luftwiderstand statt sofortiger Geschwindigkeitsänderung
 const forwardVector=new THREE.Vector3(0,0,-1).applyQuaternion(airplane.quaternion);
