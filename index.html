@@ -176,7 +176,7 @@ if(!renderer){
 scene.add(new THREE.AmbientLight(0xffffff,.6));
 const sun=new THREE.DirectionalLight(0xfffaed,.8);sun.position.set(500,1000,500);scene.add(sun);
 const region=saveState.currentMission>=20?1:0;
-const groundColor=region===0?0x557a46:0x8b7650,groundSize=region===1?16000:10000;
+const groundColor=region===0?0x557a46:0x8b7650,groundSize=region===1?24000:18000;
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(groundSize,groundSize,24,24),new THREE.MeshStandardMaterial({color:groundColor,roughness:.9,metalness:.1,flatShading:true}));
 ground.rotation.x=-Math.PI/2;scene.add(ground);
 const runway=new THREE.Mesh(new THREE.PlaneGeometry(60,800),new THREE.MeshStandardMaterial({color:0x333333,roughness:.8,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1}));
