@@ -78,3 +78,201 @@ const realAircraftProfiles = {
   }
 };
 const missionData=[];
+
+(function() {
+  const THREE_SRC = "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js";
+  const ensureThree = function() {
+    if (window.THREE) return true;
+    const script = document.createElement("script");
+    script.src = THREE_SRC;
+    script.async = false;
+    document.head.appendChild(script);
+    return false;
+  };
+
+  const getProfile = function(type) {
+    return realAircraftProfiles[type] || {
+      fuselageLength: 1,
+      fuselageWidth: 0.18,
+      fuselageHeight: 0.18,
+      noseLength: 0.2,
+      wingSpan: 1,
+      wingSweep: 0.75,
+      winglet: 0.35,
+      tailHeight: 0.2,
+      engineCount: 2,
+      engineScale: 0.8,
+      cockpitLength: 0.18,
+      cabinWindows: true,
+      windowRows: 4
+    };
+  };
+
+  const makeWindowRow = function(profile, parent, color = 0xc9e6ff) {
+    const row = new THREE.Group();
+    const windowCount = profile.windowRows || 4;
+    const spacing = 0.12;
+    const startX = -profile.fuselageLength * 0.55;
+    for (let i = 0; i < windowCount; i++) {
+      const windowMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.045, 0.035, 0.018),
+        new THREE.MeshStandardMaterial({ color, metalness: 0.2, roughness: 0.4 })
+      );
+      windowMesh.position.set(startX + i * spacing, 0, profile.fuselageHeight * 0.56);
+      row.add(windowMesh);
+      const windowMeshLower = windowMesh.clone();
+      windowMeshLower.position.z = -profile.fuselageHeight * 0.56;
+      row.add(windowMeshLower);
+    }
+    parent.add(row);
+  };
+
+  const addWinglets = function(profile, parent) {
+    const material = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.35 });
+    const tip = 0.22 + profile.winglet * 0.18;
+    const wingletGeometry = new THREE.BoxGeometry(tip * 0.55, 0.018, 0.13);
+    const leftWinglet = new THREE.Mesh(wingletGeometry, material);
+    leftWinglet.position.set(profile.wingSpan * 0.55, 0.02, 0.14);
+    leftWinglet.rotation.y = Math.PI * 0.08;
+    parent.add(leftWinglet);
+
+    const rightWinglet = leftWinglet.clone();
+    rightWinglet.position.z = -0.14;
+    rightWinglet.rotation.y = -Math.PI * 0.08;
+    parent.add(rightWinglet);
+  };
+
+  const createAircraftModel = function(type = "airliner", color = 0xf3f4f6, opts = {}) {
+    if (!window.THREE) {
+      const ready = ensureThree();
+      if (!ready) {
+        throw new Error("Three.js is still loading. Please wait a moment and try again.");
+      }
+    }
+
+    const profile = Object.assign(getProfile(type), opts);
+    const group = new THREE.Group();
+    const bodyMaterial = new THREE.MeshStandardMaterial({
+      color,
+      metalness: 0.82,
+      roughness: 0.42
+    });
+
+    const fuselage = new THREE.Mesh(
+      new THREE.CylinderGeometry(profile.fuselageWidth, profile.fuselageWidth * 1.08, profile.fuselageLength * 2.2, 24, 1, false),
+      bodyMaterial
+    );
+    fuselage.rotation.z = Math.PI / 2;
+    group.add(fuselage);
+
+    const nose = new THREE.Mesh(
+      new THREE.SphereGeometry(profile.fuselageWidth * 1.15, 20, 20, 0, Math.PI * 2, 0, Math.PI / 2),
+      bodyMaterial
+    );
+    nose.position.x = profile.fuselageLength * 1.12;
+    nose.rotation.z = -Math.PI / 2;
+    group.add(nose);
+
+    const tailCone = new THREE.Mesh(
+      new THREE.ConeGeometry(profile.fuselageWidth * 0.8, profile.fuselageLength * 0.35, 18),
+      bodyMaterial
+    );
+    tailCone.rotation.z = -Math.PI / 2;
+    tailCone.position.x = -profile.fuselageLength * 1.05;
+    group.add(tailCone);
+
+    const wingMaterial = new THREE.MeshStandardMaterial({ color: 0xe5e7eb, metalness: 0.7, roughness: 0.45 });
+    const wingGeometry = new THREE.BoxGeometry(profile.wingSpan, 0.03, 0.42 + profile.fuselageWidth * 2.2);
+    const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
+    leftWing.position.set(0, 0.02, profile.fuselageHeight * 1.4);
+    leftWing.rotation.z = -profile.wingSweep * 0.2;
+    group.add(leftWing);
+
+    const rightWing = leftWing.clone();
+    rightWing.position.z = -profile.fuselageHeight * 1.4;
+    rightWing.rotation.z = profile.wingSweep * 0.2;
+    group.add(rightWing);
+
+    const tailWingGeometry = new THREE.BoxGeometry(profile.fuselageLength * 0.45, 0.02, 0.18);
+    const horizontalTail = new THREE.Mesh(tailWingGeometry, wingMaterial);
+    horizontalTail.position.set(-profile.fuselageLength * 0.9, 0.04, 0);
+    horizontalTail.rotation.z = 0.12;
+    group.add(horizontalTail);
+
+    const verticalTail = new THREE.Mesh(
+      new THREE.BoxGeometry(0.02, profile.tailHeight, 0.22),
+      wingMaterial
+    );
+    verticalTail.position.set(-profile.fuselageLength * 0.96, profile.tailHeight * 0.45, 0);
+    group.add(verticalTail);
+
+    if (profile.cabinWindows) {
+      makeWindowRow(profile, group, 0xdbeafe);
+    }
+
+    if (profile.winglet) {
+      addWinglets(profile, group);
+    }
+
+    if (profile.engineCount) {
+      const engineMaterial = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.35 });
+      const engineGeometry = new THREE.CylinderGeometry(
+        profile.fuselageWidth * (0.56 + profile.engineScale * 0.08),
+        profile.fuselageWidth * (0.56 + profile.engineScale * 0.08),
+        profile.fuselageWidth * (1.8 + profile.engineScale * 0.1),
+        18
+      );
+
+      const enginePositions = [
+        [-0.18, 0.12, 0.38],
+        [-0.18, 0.12, -0.38],
+        [0.18, 0.12, 0.38],
+        [0.18, 0.12, -0.38]
+      ];
+
+      for (let i = 0; i < profile.engineCount; i++) {
+        const engine = new THREE.Mesh(engineGeometry, engineMaterial);
+        const pos = enginePositions[i] || [0.0, 0.12, i % 2 === 0 ? 0.38 : -0.38];
+        engine.position.set(pos[0] * profile.fuselageLength, pos[1], pos[2]);
+        engine.rotation.z = Math.PI / 2;
+        group.add(engine);
+      }
+    }
+
+    const landingGearMaterial = new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.6, roughness: 0.75 });
+    for (let side = -1; side <= 1; side += 2) {
+      const gearLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.014, 0.22, 12), landingGearMaterial);
+      gearLeg.position.set(0.2 * profile.fuselageLength, -0.2, side * 0.32);
+      group.add(gearLeg);
+
+      const noseGear = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.011, 0.16, 12), landingGearMaterial);
+      noseGear.position.set(0.7 * profile.fuselageLength, -0.18, side * 0.08);
+      group.add(noseGear);
+    }
+
+    if (profile.upperDeck) {
+      const upperDeck = new THREE.Mesh(
+        new THREE.BoxGeometry(profile.fuselageLength * 0.48, profile.fuselageHeight * 0.68, profile.fuselageWidth * 1.35),
+        new THREE.MeshStandardMaterial({ color, metalness: 0.76, roughness: 0.4 })
+      );
+      upperDeck.position.set(profile.fuselageLength * 0.12, profile.fuselageHeight * 0.44, 0);
+      group.add(upperDeck);
+    }
+
+    if (profile.doubleDeck) {
+      const upperDeck2 = new THREE.Mesh(
+        new THREE.BoxGeometry(profile.fuselageLength * 0.72, profile.fuselageHeight * 0.6, profile.fuselageWidth * 1.5),
+        new THREE.MeshStandardMaterial({ color, metalness: 0.76, roughness: 0.4 })
+      );
+      upperDeck2.position.set(-profile.fuselageLength * 0.06, profile.fuselageHeight * 0.62, 0);
+      group.add(upperDeck2);
+    }
+
+    group.userData.aircraftType = type;
+    group.rotation.x = Math.PI * 0.5;
+    return group;
+  };
+
+  window.createAircraftModel = createAircraftModel;
+  window.AircraftFactory = { createAircraftModel, getProfile };
+})();
