@@ -452,7 +452,7 @@ function buildAirportExpansion(region=0){
  makeParkedPlane(360,-190,.65,Math.PI/2,0x4a5568);
  // hangar
  const hangar=new THREE.Mesh(new THREE.BoxGeometry(105,35,75),darkMat);
- hangar.position.set(20,30,-350);airportGroup.add(hangar);
+ hangar.position.set(40,15,-350);airportGroup.add(hangar);
  const hangarDoor=new THREE.Mesh(new THREE.BoxGeometry(55,25,1),glassMat);
  hangarDoor.position.set(20,13,-388);airportGroup.add(hangarDoor);
  airportGroup.position.set(region===1?-850:0,0,region===1?-850:0);
