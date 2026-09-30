@@ -345,7 +345,7 @@ lakeData.forEach(l=>{
  water.rotation.x=-Math.PI/2;water.rotation.z=l.r;water.position.set(l.x,.035,l.z);scene.add(water);
 });
 const sea=new THREE.Mesh(new THREE.PlaneGeometry(5000,5000),new THREE.MeshStandardMaterial({color:region===0?0x167da6:0x126d86,roughness:.2,metalness:.05}));
-sea.rotation.x=-Math.PI/2;sea.position.set(1900,.025,-10000);scene.add(sea);
+sea.rotation.x=-Math.PI/2;sea.position.set(1900,.025,-20000);scene.add(sea);
 const mountainMats=[
 new THREE.MeshStandardMaterial({color:0x536b52,roughness:1,flatShading:true}),
 new THREE.MeshStandardMaterial({color:0x65725e,roughness:1,flatShading:true}),
