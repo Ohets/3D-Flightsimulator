@@ -399,13 +399,13 @@ function buildAirportExpansion(region=0){
  const yellowMat=new THREE.MeshStandardMaterial({color:0xf2c300,roughness:.7});
  // apron and taxiway
  const apron=new THREE.Mesh(new THREE.PlaneGeometry(520,420),concreteMat);
- apron.rotation.x=-Math.PI/2;apron.position.set(150,1,-180);apron.renderOrder=1;airportGroup.add(apron);
+ apron.rotation.x=-Math.PI/2;apron.position.set(150,2,-180);apron.renderOrder=1;airportGroup.add(apron);
  const taxi=new THREE.Mesh(new THREE.PlaneGeometry(28,500),darkMat);
- taxi.rotation.x=-Math.PI/2;taxi.position.set(70,1,-210);taxi.renderOrder=2;airportGroup.add(taxi);
+ taxi.rotation.x=-Math.PI/2;taxi.position.set(70,2,-210);taxi.renderOrder=2;airportGroup.add(taxi);
  // taxiway center markings
  for(let z=-450;z<40;z+=45){
   const mark=new THREE.Mesh(new THREE.PlaneGeometry(2.5,18),yellowMat);
-  mark.rotation.x=-Math.PI/2;mark.position.set(70,.10,z);mark.renderOrder=3;airportGroup.add(mark);
+  mark.rotation.x=-Math.PI/2;mark.position.set(70,2.1,z);mark.renderOrder=3;airportGroup.add(mark);
  }
  // control tower
  const towerBase=new THREE.Mesh(new THREE.BoxGeometry(24,48,24),concreteMat);
