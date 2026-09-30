@@ -399,9 +399,9 @@ function buildAirportExpansion(region=0){
  const yellowMat=new THREE.MeshStandardMaterial({color:0xf2c300,roughness:.7});
  // apron and taxiway
  const apron=new THREE.Mesh(new THREE.PlaneGeometry(520,420),concreteMat);
- apron.rotation.x=-Math.PI/2;apron.position.set(150,.055,-180);apron.renderOrder=1;airportGroup.add(apron);
+ apron.rotation.x=-Math.PI/2;apron.position.set(150,1,-180);apron.renderOrder=1;airportGroup.add(apron);
  const taxi=new THREE.Mesh(new THREE.PlaneGeometry(28,500),darkMat);
- taxi.rotation.x=-Math.PI/2;taxi.position.set(70,.065,-210);taxi.renderOrder=2;airportGroup.add(taxi);
+ taxi.rotation.x=-Math.PI/2;taxi.position.set(70,1,-210);taxi.renderOrder=2;airportGroup.add(taxi);
  // taxiway center markings
  for(let z=-450;z<40;z+=45){
   const mark=new THREE.Mesh(new THREE.PlaneGeometry(2.5,18),yellowMat);
@@ -452,9 +452,9 @@ function buildAirportExpansion(region=0){
  makeParkedPlane(360,-190,.65,Math.PI/2,0x4a5568);
  // hangar
  const hangar=new THREE.Mesh(new THREE.BoxGeometry(105,35,75),darkMat);
- hangar.position.set(-20,13,-350);airportGroup.add(hangar);
+ hangar.position.set(200,13,-350);airportGroup.add(hangar);
  const hangarDoor=new THREE.Mesh(new THREE.BoxGeometry(55,25,1),glassMat);
- hangarDoor.position.set(20,13,-388);airportGroup.add(hangarDoor);
+ hangarDoor.position.set(200,13,-388);airportGroup.add(hangarDoor);
  airportGroup.position.set(region===1?-850:0,0,region===1?-850:0);
  scene.add(airportGroup);
 }
