@@ -65,7 +65,12 @@ const aircraftData=[
 {name:"Boeing 747",price:1200,speedMax:78,handling:.58,liftFactor:.28,color:0xf4f4f4,desc:"Legendärer Jumbo-Jet mit vier Triebwerken.",type:"jumbo"},
 {name:"Airbus A380",price:2000,speedMax:76,handling:.48,liftFactor:.34,color:0xf1f1f1,desc:"Doppelstöckiger Superjumbo für viele Passagiere.",type:"superjumbo"},
 {name:"Rescue Helicopter",price:900,speedMax:48,handling:1.65,liftFactor:.42,color:0xff5a36,desc:"Wendiger Rettungshubschrauber mit Hauptrotor.",type:"helicopter"},
-{name:"Recon Drone",price:600,speedMax:60,handling:2.4,liftFactor:.30,color:0x4b5563,desc:"Kleine Aufklärungsdrohne mit vier Rotoren.",type:"drone"}];
+{name:"Recon Drone",price:600,speedMax:60,handling:2.4,liftFactor:.30,color:0x4b5563,desc:"Kleine Aufklärungsdrohne mit vier Rotoren.",type:"drone"},
+{name:"Airbus A400M",price:1500,speedMax:62,handling:.75,liftFactor:.24,color:0x65727b,desc:"Viermotoriges modernes Transportflugzeug.",type:"a400m"},
+{name:"Spitfire",price:1100,speedMax:92,handling:1.9,liftFactor:.12,color:0x4b5a3f,desc:"Legendäres Jagdflugzeug mit elliptischen Tragflächen.",type:"spitfire"},
+{name:"F/A-18 Hornet",price:1800,speedMax:115,handling:2.1,liftFactor:.10,color:0x78818a,desc:"Zweistrahliges Mehrzweck-Kampfflugzeug.",type:"f18"},
+{name:"Concorde",price:2400,speedMax:125,handling:.7,liftFactor:.09,color:0xe8e8e8,desc:"Ikonisches Überschall-Passagierflugzeug mit Deltaflügel.",type:"concorde"},
+{name:"CH-47 Chinook",price:1700,speedMax:48,handling:1.25,liftFactor:.38,color:0x596447,desc:"Schwerer Transporthubschrauber mit Tandemrotoren.",type:"chinook"}];
 const missionData=[];
 for(let i=1;i<=40;i++)missionData.push({id:i-1,name:"Mission "+i+": "+(i===1?"Erster Start":i===21?"Neue Region":i<=5?"Höhentraining":i<=10?"Präzisionsflug":i<=20?"Schwerer Navigationskurs":i<=30?"Küstenflug":i<=35?"Gebirgsflug":"Extremes Manöver"),targetPos:{x:Math.sin(i*1.5)*(220+i*55)+(i>20?1800:0),y:40+i*11+Math.cos(i)*20,z:-300-i*170},reward:30+i*20,desc:"Fliege präzise durch den markierten Kontrollring am Himmel."});
 let scene,camera,renderer,airplane,propellerLeft,propellerRight,ringTarget,clock=new THREE.Clock();
@@ -502,7 +507,26 @@ function addJetEngine(x,z,size=1){
  fan.rotation.x=Math.PI/2;fan.position.set(x,-.05,z-1.31*size);airplane.add(fan);
 }
 
-if(ac.type==="helicopter"){
+if(ac.type==="a400m"||ac.type==="spitfire"||ac.type==="f18"||ac.type==="concorde"){
+ const isA400=ac.type==="a400m",isSpit=ac.type==="spitfire",isF18=ac.type==="f18",isCon=ac.type==="concorde";
+ const length=isCon?16.5:isA400?13.5:isF18?11.5:9.2;
+ const radius=isCon?1.15:isA400?1.35:isF18?.95:.78;
+ const fus=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius*.78,length,16),bodyMat);fus.rotation.x=Math.PI/2;airplane.add(fus);
+ const nose=new THREE.Mesh(new THREE.ConeGeometry(radius*.9,isCon?5.2:2.4,14),bodyMat);nose.rotation.x=-Math.PI/2;nose.position.z=-length/2-1.8;airplane.add(nose);
+ const wingSpan=isSpit?12.8:isF18?11.8:isCon?13.8:17.5;
+ const wingChord=isSpit?2.5:isF18?3.0:isCon?5.0:3.6;
+ addWingShape(wingSpan,wingChord,isSpit?1.4:isF18?1.0:1.8,isCon?3.2:isF18?2.4:1.2,.24,bodyMat,.05);
+ const tail=new THREE.Mesh(new THREE.BoxGeometry(isF18?5.2:4.8,.16,1.25),bodyMat);tail.position.set(0,.38,length*.38);airplane.add(tail);
+ if(isSpit){const fin=new THREE.Mesh(new THREE.BoxGeometry(.22,2.2,1.8),bodyMat);fin.position.set(0,1.25,length*.39);fin.rotation.x=-.16;airplane.add(fin);}
+ if(isF18){for(const x of [-1.65,1.65]){const eng=new THREE.Mesh(new THREE.CylinderGeometry(.62,.5,3.8,14),darkMat);eng.rotation.x=Math.PI/2;eng.position.set(x,-.12,.5);airplane.add(eng);} const fin1=new THREE.Mesh(new THREE.BoxGeometry(.18,2.5,2.0),bodyMat);fin1.position.set(-1.45,1.2,4.0);fin1.rotation.x=-.18;airplane.add(fin1);const fin2=fin1.clone();fin2.position.x=1.45;airplane.add(fin2);}
+ if(isCon){for(const x of [-3.3,-1.1,1.1,3.3]){const eng=new THREE.Mesh(new THREE.CylinderGeometry(.48,.38,3.2,14),metalMat);eng.rotation.x=Math.PI/2;eng.position.set(x,-.48,-.1);airplane.add(eng);} const droop=new THREE.Mesh(new THREE.BoxGeometry(.7,.5,3.2),bodyMat);droop.position.set(0,-.05,-length*.45);droop.rotation.x=-.28;airplane.add(droop);}
+ if(isA400){const rotors=[];for(const x of [-4.7,-1.55,1.55,4.7]){const nac=new THREE.Mesh(new THREE.CylinderGeometry(.48,.38,2.2,14),darkMat);nac.rotation.x=Math.PI/2;nac.position.set(x,-.62,-.7);airplane.add(nac);const rg=new THREE.Group();for(let b=0;b<8;b++){const blade=new THREE.Mesh(new THREE.BoxGeometry(.10,1.35,.05),metalMat);blade.position.set(Math.cos(b*Math.PI/4)*.38,.0,Math.sin(b*Math.PI/4)*.38);blade.rotation.z=b*Math.PI/4;rg.add(blade);}rg.position.set(x,-.62,-1.82);airplane.add(rg);rotors.push(rg);}airplane.userData.rotors=rotors;}
+}else if(ac.type==="chinook"){
+ const body=new THREE.Mesh(new THREE.CapsuleGeometry(1.55,5.8,8,16),bodyMat);body.rotation.x=Math.PI/2;body.position.set(0,.15,.2);airplane.add(body);
+ const nose=new THREE.Mesh(new THREE.SphereGeometry(1.25,16,10),glassMat);nose.scale.set(1,.72,.8);nose.position.set(0,.35,-3.0);airplane.add(nose);
+ const rotors=[];for(const z of [-2.1,2.7]){const rg=new THREE.Group();const hub=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.35,10),darkMat);hub.rotation.x=Math.PI/2;rg.add(hub);for(let b=0;b<4;b++){const blade=new THREE.Mesh(new THREE.BoxGeometry(.3,6.2,.12),darkMat);blade.rotation.y=b*Math.PI/2;rg.add(blade);}rg.position.set(0,2.05,z);airplane.add(rg);rotors.push(rg);}airplane.userData.rotors=rotors;
+ const fin=new THREE.Mesh(new THREE.BoxGeometry(.18,2.2,1.8),bodyMat);fin.position.set(0,1.1,3.0);airplane.add(fin);
+}else if(ac.type==="helicopter"){
  const body=new THREE.Mesh(new THREE.SphereGeometry(2.15,18,12),bodyMat);
  body.scale.set(1.3,.82,1.85);body.position.set(0,.05,-.65);airplane.add(body);
  const nose=new THREE.Mesh(new THREE.SphereGeometry(1.55,16,10),glassMat);
@@ -594,7 +618,19 @@ if(ac.type==="helicopter"){
  airplane.add(cockpit);
  const windowRadius=radius*.94;
  addWindowRow(windowRadius,-length*.30,length*.31,isA380?22:is747?19:17,.52,0);
- if(isA380)addWindowRow(windowRadius,-length*.30,length*.31,22,.92,0);
+ if(isA380){
+  // Zweite Fensterreihe und klar erkennbare Doppelstock-Silhouette des A380
+  addWindowRow(windowRadius,-length*.30,length*.31,22,.92,0);
+  const upperBand=new THREE.Mesh(new THREE.BoxGeometry(radius*1.82,.10,length*.60),whiteMat);
+  upperBand.position.set(0,1.00,.05);airplane.add(upperBand);
+  for(let side of [-1,1]){
+   for(let i=0;i<18;i++){
+    const z=-length*.27+i*(length*.54/17);
+    const w=new THREE.Mesh(new THREE.BoxGeometry(.16,.13,.30),glassMat);
+    w.position.set(side*radius*.95,1.15,z);w.rotation.y=side*.06;airplane.add(w);
+   }
+  }
+ }
  if(is747){
   const hump=new THREE.Mesh(new THREE.CylinderGeometry(1.32,1.42,5.0,16),whiteMat);
   hump.rotation.x=Math.PI/2;hump.position.set(0,.92,-2.2);airplane.add(hump);
@@ -602,7 +638,17 @@ if(ac.type==="helicopter"){
  }
  const engineCount=isA320?2:4;
  const engineXs=engineCount===2?[-5.0,5.0]:[-7.4,-2.5,2.5,7.4];
- engineXs.forEach((x,i)=>addJetEngine(x,-.75,isA380?.95:is747?.9:.82));
+ engineXs.forEach((x,i)=>{
+  addJetEngine(x,-.75,isA380?.95:is747?.9:.82);
+  // sichtbare Fan-Schaufeln und Spinner für detailliertere Triebwerke
+  const fan=new THREE.Group();
+  const hub=new THREE.Mesh(new THREE.ConeGeometry(.12,.28,10),metalMat);hub.rotation.x=Math.PI/2;fan.add(hub);
+  for(let b=0;b<8;b++){
+   const blade=new THREE.Mesh(new THREE.BoxGeometry(.055,.32,.035),metalMat);
+   blade.position.set(Math.cos(b*Math.PI/4)*.23,Math.sin(b*Math.PI/4)*.23,0);blade.rotation.z=b*Math.PI/4;fan.add(blade);
+  }
+  fan.position.set(x,-.05,-.75-(isA380?.95:is747?.9:.82)*1.31);fan.userData.engineFan=true;airplane.add(fan);
+ });
  const gearXs=isA320?[-3.4,3.4]:[-4.6,4.6];
  addLandingGear(0,-length*.28,.9);
  gearXs.forEach(x=>addLandingGear(x,.35,.8));
@@ -611,6 +657,15 @@ if(ac.type==="helicopter"){
  noseGear.position.set(0,-.68,-length*.34);airplane.add(noseGear);
  const noseWheel=new THREE.Mesh(new THREE.TorusGeometry(.23,.075,8,12),rubberMat);
  noseWheel.rotation.x=Math.PI/2;noseWheel.position.set(0,-1.08,-length*.34);airplane.add(noseWheel);
+ // Türen und Notausgänge als feine Rumpfdetails
+ const doorCount=isA320?4:is747?8:8;
+ for(let d=0;d<doorCount;d++){
+  const z=-length*.28+d*(length*.56/(doorCount-1));
+  for(let side of [-1,1]){
+   const door=new THREE.Mesh(new THREE.BoxGeometry(.035,.62,.48),glassMat);
+   door.position.set(side*radius*.98,.48,z);door.rotation.y=side*.08;airplane.add(door);
+  }
+ }
  if(isA320){
   const stripe=new THREE.Mesh(new THREE.BoxGeometry(radius*2.05,.12,length*.58),accentMat);
   stripe.position.set(0,.18,.15);airplane.add(stripe);
