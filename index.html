@@ -16,8 +16,65 @@ const aircraftData=[
 { name: "Recon Drone", price: 600, speedMax: 60, handling: 2.4, liftFactor: .30, color: 0x4b5563, desc: "Kleine Aufklärungsdrohne mit vier Rotoren.", type: "drone" }
 ];
 const realAircraftProfiles = {
-  airliner: { handlingScale: 0.92, liftScale: 1.08, maxSpeedOverride: 82, pitchDamping: 0.96 },
-  jumbo: { handlingScale: 0.78, liftScale: 1.15, maxSpeedOverride: 78, pitchDamping: 0.9 },
-  superjumbo: { handlingScale: 0.68, liftScale: 1.22, maxSpeedOverride: 76, pitchDamping: 0.86 }
+  airliner: {
+    handlingScale: 0.92,
+    liftScale: 1.08,
+    maxSpeedOverride: 82,
+    pitchDamping: 0.96,
+    fuselageLength: 1.0,
+    fuselageWidth: 0.18,
+    fuselageHeight: 0.18,
+    noseLength: 0.24,
+    wingSpan: 1.15,
+    wingSweep: 0.8,
+    winglet: 0.42,
+    tailHeight: 0.25,
+    engineCount: 2,
+    engineScale: 0.84,
+    cockpitLength: 0.18,
+    windowRows: 4,
+    cabinWindows: true
+  },
+  jumbo: {
+    handlingScale: 0.78,
+    liftScale: 1.15,
+    maxSpeedOverride: 78,
+    pitchDamping: 0.9,
+    fuselageLength: 1.18,
+    fuselageWidth: 0.22,
+    fuselageHeight: 0.2,
+    noseLength: 0.32,
+    wingSpan: 1.32,
+    wingSweep: 0.72,
+    winglet: 0.58,
+    tailHeight: 0.32,
+    engineCount: 4,
+    engineScale: 1.0,
+    cockpitLength: 0.26,
+    upperDeck: true,
+    windowRows: 6,
+    cabinWindows: true
+  },
+  superjumbo: {
+    handlingScale: 0.68,
+    liftScale: 1.22,
+    maxSpeedOverride: 76,
+    pitchDamping: 0.86,
+    fuselageLength: 1.32,
+    fuselageWidth: 0.26,
+    fuselageHeight: 0.22,
+    noseLength: 0.34,
+    wingSpan: 1.45,
+    wingSweep: 0.68,
+    winglet: 0.7,
+    tailHeight: 0.34,
+    engineCount: 4,
+    engineScale: 1.12,
+    cockpitLength: 0.28,
+    upperDeck: true,
+    doubleDeck: true,
+    windowRows: 8,
+    cabinWindows: true
+  }
 };
 const missionData=[];
