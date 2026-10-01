@@ -120,14 +120,14 @@ function processPayPalReturn(){
  if(elapsed<30000){
   localStorage.removeItem(pendingKey);
   history.replaceState({},'',location.pathname);
-  alert('Du warst weniger als 30 Sekunden bei PayPal. Es wurden keine Credits gutgeschrieben.');
+  alert('Es wurden keine Credits gutgeschrieben.');
   return;
  }
  localStorage.removeItem(pendingKey);
  saveState.credits=(saveState.credits||0)+amount;
  saveGame();
  updateUI();
- alert('Du warst '+Math.floor(elapsed/1000)+' Sekunden außerhalb des Spiels. '+amount.toLocaleString('de-AT')+' Credits wurden hinzugefügt.');
+ alert('+amount.toLocaleString('de-AT')+' Credits wurden hinzugefügt.');
  history.replaceState({},'',location.pathname);
 }
 function openCreditShop(){
